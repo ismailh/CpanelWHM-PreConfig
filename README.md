@@ -40,7 +40,6 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 > Ubuntu 20.04 LTS
 
----
 
 ### Database Default Install
 > MariaDB 10.3

@@ -8,14 +8,23 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 ```
 ## Include Software?
 > CSF
+
 > CMC 
+
 > CMQ 
+
 > Imunify360 
+
 > Softaculous
+
 > WP Toolkit
+
 > jetbackup4 & 5
+
 > LiteSpeed 
+
 > CloudLinux 
+
 > WHMReseller 
 
 ## Supported OS?

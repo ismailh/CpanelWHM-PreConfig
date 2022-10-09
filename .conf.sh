@@ -123,6 +123,25 @@ if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc ] ; then
 			fi
 		fi
 
+
+
+if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ] ; then
+			echo "CMQ is already installed on the server!";
+		else
+			echo -n "CMQ not found! Would you like to install? (y/n) ";
+			read yesno < /dev/tty
+			if [ "x$yesno" = "xy" ] ; then
+				wget http://download.configserver.com/cmq.tgz -O /usr/src/cmq.tgz &>/dev/null
+				/usr/bin/tar -xzf /usr/src/cmq.tgz -C /usr/src && cd /usr/src/cmq && /usr/bin/sh install.sh &>/dev/null
+				cd /root && /usr/bin/rm -rf /usr/src/cmq /usr/src/cmq.tgz /usr/src/error_log &>/dev/null
+				echo "Done! CMQ successfully installed & enabled!";
+			else
+				echo "Successfully skipped the installation of CMQ.";
+			fi
+		fi
+
+
+		
 echo "Disabling IPv6 address on the server's network"
 		grep -q '^net.ipv6.conf.all.disable_ipv6 = .*' /etc/sysctl.conf && grep -q '^net.ipv6.conf.default.disable_ipv6 = .*' /etc/sysctl.conf
 		/usr/bin/sed -i 's/^net.ipv6.conf.all.disable_ipv6 = .*/net.ipv6.conf.all.disable_ipv6 = 1/' /etc/sysctl.conf

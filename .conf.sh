@@ -148,6 +148,12 @@ echo "Disabling IPv6 address on the server's network"
 		/usr/bin/sed -i 's/^net.ipv6.conf.default.disable_ipv6 = .*/net.ipv6.conf.default.disable_ipv6 = 1/' /etc/sysctl.conf
 		echo 'net.ipv6.conf.default.disable_ipv6 = 1' >> /etc/sysctl.conf && echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
 		/usr/sbin/sysctl -p &>/dev/null # make the settings effective
+		
+# Uninstallation of ImunifyAV from cPanel v88
+		if [ -f /usr/bin/imunify-antivirus ]; then
+			/usr/bin/wget https://repo.imunify360.cloudlinux.com/defence360/imav-deploy.sh -O /root/imav-deploy.sh &>/dev/null
+			/usr/bin/chmod +x /root/imav-deploy.sh && /root/imav-deploy.sh --uninstall &>/dev/null && rm -f /root/imav-deploy.sh &>/dev/null
+		fi		
 
 if [ -f /usr/bin/imunify360-agent ] ; then
 			echo "Imunify360 is already installed on the server!";

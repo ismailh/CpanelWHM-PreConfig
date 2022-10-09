@@ -15,6 +15,8 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 > Remote MX Wizard
 
+> CpCleaner
+
 > Account DNS Check
 
 > Imunify360 

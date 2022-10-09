@@ -1,4 +1,31 @@
 #!/bin/bash
+
+if [[ $EUID -ne 0 ]]; then
+	echo "CpanelWHM-PreConfig Script must be run as root";
+	exit 1
+fi
+# Checking OS and modules!
+
+if [ "$(/usr/bin/whoami)" == "root" ]; then
+
+	if [ -f /etc/redhat-release ]; then
+		/usr/bin/yum install curl wget sudo openssl tar unzip -y --skip-broken &>/dev/null
+		if [ -f /etc/yum.repos.d/mysql-community.repo ]; then
+			/usr/bin/sed -i "s|enabled=1|enabled=0|g" /etc/yum.repos.d/mysql-community.repo &>/dev/null
+		fi
+		if [ ! -f /etc/yum.repos.d/epel.repo ]; then
+			/usr/bin/yum install epel-release -y --skip-broken &>/dev/null
+			/usr/bin/yum groupinstall "Development Tools" -y &>/dev/null
+		else
+			/usr/bin/sed -i "s|https|http|g" /etc/yum.repos.d/epel.repo &>/dev/null
+		fi
+		/usr/bin/yum-complete-transaction --cleanup-only &>/dev/null
+		/usr/bin/yum update -y --skip-broken &>/dev/null
+	elif [ -f /etc/lsb-release ]; then
+		/usr/bin/apt update &>/dev/null && /usr/bin/apt upgrade -y &>/dev/null
+		/usr/bin/apt install curl wget sudo openssl tar unzip -y &>/dev/null
+	fi
+
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 HOSTNAME=$(hostname -f)
@@ -22,36 +49,6 @@ echo ""
 echo ""
 echo "installs L3 Admin cPanel (CTRL + C to cancel)"
 sleep 10
-
-if [[ $EUID -ne 0 ]]; then
-	echo "CpanelWHM-PreConfig Script must be run as root";
-	exit 1
-fi
-
-
-
-# Checking OS and modules!
-
-if [ "$(/usr/bin/whoami)" == "root" ]; then
-
-	if [ -f /etc/redhat-release ]; then
-		/usr/bin/yum install curl wget sudo openssl tar unzip -y --skip-broken &>/dev/null
-		if [ -f /etc/yum.repos.d/mysql-community.repo ]; then
-			/usr/bin/sed -i "s|enabled=1|enabled=0|g" /etc/yum.repos.d/mysql-community.repo &>/dev/null
-		fi
-		if [ ! -f /etc/yum.repos.d/epel.repo ]; then
-			/usr/bin/yum install epel-release -y --skip-broken &>/dev/null
-			/usr/bin/yum groupinstall "Development Tools" -y &>/dev/null
-		else
-			/usr/bin/sed -i "s|https|http|g" /etc/yum.repos.d/epel.repo &>/dev/null
-		fi
-		/usr/bin/yum-complete-transaction --cleanup-only &>/dev/null
-		/usr/bin/yum update -y --skip-broken &>/dev/null
-	elif [ -f /etc/lsb-release ]; then
-		/usr/bin/apt update &>/dev/null && /usr/bin/apt upgrade -y &>/dev/null
-		/usr/bin/apt install curl wget sudo openssl tar unzip -y &>/dev/null
-	fi
-
 
 echo "####### CPANEL PRE-CONFIGURATION ##########"
 echo "####### Disabling yum-cron...########"

@@ -160,6 +160,26 @@ if [ -d /usr/local/cpanel/base/3rdparty/RemoteMXWizard/ ] ; then
 			fi
 		fi
 
+if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] ; then
+			echo "Account DNS Check is already installed on the server!";
+		else
+			echo -n "Account DNS Check not found! Would you like to install? (y/n) ";
+			read yesno < /dev/tty
+			if [ "x$yesno" = "xy" ] ; then
+
+					cd /usr/src
+				wget http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
+				sh latest-accountdnscheck
+			echo "Done! Account DNS Check successfully installed & enabled!";
+			else
+				echo "Successfully skipped the installation of Account DNS Check.";
+			fi
+		fi
+
+cd /usr/src
+wget http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
+sh latest-accountdnscheck
+
 
 echo "Disabling IPv6 address on the server's network"
 		grep -q '^net.ipv6.conf.all.disable_ipv6 = .*' /etc/sysctl.conf && grep -q '^net.ipv6.conf.default.disable_ipv6 = .*' /etc/sysctl.conf

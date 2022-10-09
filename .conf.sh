@@ -29,14 +29,6 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 
-# Detecting the Architecture
-
-
-if ([ `uname -i` == x86_64 ] || [ `uname -m` == x86_64 ]); then
-	ARCH=64
-else
-	ARCH=32
-fi
 
 # Checking OS and modules!
 

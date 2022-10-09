@@ -140,6 +140,24 @@ if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ] ; then
 			fi
 		fi
 
+if [ -d /usr/local/cpanel/base/3rdparty/RemoteMXWizard/ ] ; then
+			echo "Remote MX Wizard is already installed on the server!";
+		else
+			echo -n "Remote MX Wizard not found! Would you like to install? (y/n) ";
+			read yesno < /dev/tty
+			if [ "x$yesno" = "xy" ] ; then
+
+					wget -O cpc-1.0.3.tar "http://store.gk-root.com/dl.php?type=d&id=233"
+					tar -xf cpc-1.0.3.tar
+						cd cpc-1.0.3
+						sh cpc-installer -install
+						cd ..
+						rm -Rfv cpc-1.0.3/ cpc-1.0.3.tar
+			echo "Done! CRemote MX Wizard successfully installed & enabled!";
+			else
+				echo "Successfully skipped the installation of Remote MX Wizard.";
+			fi
+		fi
 
 
 echo "Disabling IPv6 address on the server's network"

@@ -140,7 +140,7 @@ echo "####### END INSTALLING CPANEL #######"
 				fi
 			fi
 
-	if [ -d /usr/local/cpanel/base/3rdparty/RemoteMXWizard/ ] ; then
+	if [ -d /usr/local/cpanel/base/3rdparty/RemoteMxWizard/ ] ; then
 				echo "Remote MX Wizard is already installed on the server!";
 			else
 				echo -n "Remote MX Wizard not found! Would you like to install? (y/n) ";

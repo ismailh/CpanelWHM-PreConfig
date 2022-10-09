@@ -42,6 +42,9 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 ---
 
+### Database Default Install
+> MariaDB 10.3
+
 ### Default LSWS password you can change.
 * user = admin
 * pass = webhost.llc

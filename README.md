@@ -40,7 +40,7 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 ---
 
-### Default password you can change.
+### Default LSWS password you can change.
 * user = admin
 * pass = webhost.llc
 

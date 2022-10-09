@@ -47,3 +47,9 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 * memory_limit = 248M
 * post_max_size = 100M
 * upload_max_filesize = 100M
+
+
+### Support
+
+Any issue please contact ismail@bluedot.ltd
+https://me.ismail.info/

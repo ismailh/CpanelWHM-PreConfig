@@ -13,6 +13,8 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 > CMQ 
 
+> Remote MX Wizard
+
 > Imunify360 
 
 > Softaculous

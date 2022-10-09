@@ -89,7 +89,6 @@ echo "####### END INSTALLING CPANEL #######"
 				/usr/bin/wget https://download.configserver.com/csf.tgz -O /usr/src/csf.tgz &>/dev/null
 				/usr/bin/tar -xzf /usr/src/csf.tgz -C /usr/src && cd /usr/src/csf && sh install.sh &>/dev/null
 				cd /root && /usr/bin/rm -rf /usr/src/csf /usr/src/csf.tgz /usr/src/error_log &>/dev/null
-				/usr/bin/wget https://data.webhost.llc/RAYa5/cUgOrAQO18./raw -O /etc/csf/csf.conf &>/dev/null
 				
                     touch /etc/sysconfig/iptables
 	                touch /etc/sysconfig/iptables6

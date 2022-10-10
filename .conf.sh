@@ -306,7 +306,7 @@ if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/softaculous ] ; then
 php_suexec="2"
 port_offset="1000"
 admin_user="admin"
-admin_pass="webhost.llc"
+admin_pass="webhost321"
 admin_email="root@localhost"
 easyapache_integration="1"
 auto_switch_to_lsws="1"

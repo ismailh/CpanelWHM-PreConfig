@@ -988,7 +988,7 @@ if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/whmreseller ] ; then
                 ./install
                 rm install
                 rm install.cpp
-				echo "Done! JeWHMResellersuccessfully installed on your server!";
+				echo "Done! WHMResellersuccessfully installed on your server!";
 			else
 				echo "Successfully skipped the installation of WHMReseller";
 			fi
@@ -999,4 +999,4 @@ echo "" > /root/.conf.sh
 history -c
 echo "" > /root/.bash_history
 
-echo "#### Please wait 10 min for serv restart any issue please contact ismail@bluedot.ltd  ####"
+echo "#### Please any issue please contact ismail@bluedot.ltd  ####"

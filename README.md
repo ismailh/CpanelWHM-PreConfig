@@ -38,7 +38,7 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 > AlmaLinux 8.x/9.x 64bit
 
-> Ubuntu 20.04 LTS
+
 
 
 ### Database Default Install

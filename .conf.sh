@@ -2,7 +2,7 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 HOSTNAME=$(hostname -f)
-PASSV_PORT="50000:50100";
+PASSV_PORT="50000:65534";
 PASSV_MIN=$(echo $PASSV_PORT | cut -d':' -f1)
 PASSV_MAX=$(echo $PASSV_PORT | cut -d':' -f2)
 ISVPS=$(((dmidecode -t system 2>/dev/null | grep "Manufacturer" | grep -i 'VMware\|KVM\|Bochs\|Virtual\|HVM' > /dev/null) || [ -f /proc/vz/veinfo ]) && echo "SI" || echo "NO")

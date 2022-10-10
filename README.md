@@ -46,7 +46,7 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 ### Default LSWS password you can change.
 * user = admin
-* pass = webhost.llc
+* pass = webhost321
 
 ### Standard PHP Settings
 * max_execution_time = 200

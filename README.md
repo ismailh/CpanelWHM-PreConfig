@@ -1,4 +1,4 @@
-# CpanelWHM-PreConfig
+# Cpanel & WHM-PreConfig
 Automated scripts to install and configure cPanel/WHM &amp; Litespeed and Cloudlinux etc.  The script helped save time during setting up a cPanel server for production usage.
 
 ## How to run?

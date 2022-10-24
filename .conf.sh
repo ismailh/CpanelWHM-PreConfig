@@ -792,7 +792,8 @@ ea-php80-php-bcmath \
 ea-php80-php-gettext \
 ea-php80-php-gmp \
 ea-php80-php-xml \
-ea-php80-php-imap \ea-php81 \
+ea-php80-php-imap \
+ea-php81 \
 ea-php81-libc-client \
 ea-php81-pear \
 ea-php81-php-bcmath \

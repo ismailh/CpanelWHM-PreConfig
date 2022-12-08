@@ -386,7 +386,7 @@ sed -i '/^TLSCipherSuite:.*/d' / var / cpanel / conf / pureftpd / local; echo 'T
 sed -i '/^LimitRecursion:.*/d' / var / cpanel / conf / pureftpd / local; echo "LimitRecursion: 50000  12 " >> / var / cpanel / conf / pureftpd / local
 echo "pure-ftpd  installed on the server."
 /usr/local/cpanel/scripts/setupftpserver pure-ftpd --force &>/dev/null
-echo "Pure-FTP Installed & it has been initialized.";
+		echo "Pure-FTP Installed & it has been initialized.";
 		# Installing ionCube and SourceGuardian Loader
 		/usr/bin/sed -i 's/phploader=.*/phploader=ioncube,sourceguardian/' /var/cpanel/cpanel.config
 		/usr/local/cpanel/whostmgr/bin/whostmgr2 --updatetweaksettings &>/dev/null

@@ -145,45 +145,6 @@ echo "####### END INSTALLING CPANEL #######"
 				fi
 			fi
 
-	if [ -d /usr/local/cpanel/base/3rdparty/RemoteMxWizard/ ] ; then
-				echo "Remote MX Wizard is already installed on the server!";
-			else
-				echo -n "Remote MX Wizard not found! Would you like to install? (y/n) ";
-				read yesno < /dev/tty
-				if [ "x$yesno" = "xy" ] ; then
-
-						wget -O rmw-1.1.2.tar "http://store.gk-root.com/dl.php?type=d&id=231"
-							tar -xf rmw-1.1.2.tar
-							cd rmw-1.1.2
-							sh rmw-installer.sh -install
-							cd ..
-							rm -Rfv rmw-1.1.2/ rmw-1.1.2.tar
-							cp /usr/local/cpanel/base/3rdparty/RemoteMXWizard/conf/update /etc/cron.monthly/
-				echo "Done! CRemote MX Wizard successfully installed & enabled!";
-				else
-					echo "Successfully skipped the installation of Remote MX Wizard.";
-				fi
-			fi
-	if [ -d /usr/local/cpanel/base/3rdparty/CpCleaner/ ] ; then
-				echo "CpCleaner  is already installed on the server!";
-			else
-				echo -n "CpCleaner  not found! Would you like to install? (y/n) ";
-				read yesno < /dev/tty
-				if [ "x$yesno" = "xy" ] ; then
-
-					wget -O cpc-1.0.3.tar "http://store.gk-root.com/dl.php?type=d&id=233"
-						tar -xf cpc-1.0.3.tar
-						cd cpc-1.0.3
-						sh cpc-installer -install
-						cd ..
-						rm -Rfv cpc-1.0.3/ cpc-1.0.3.tar
-				echo "Done! CpCleaner  successfully installed & enabled!";
-				else
-					echo "Successfully skipped the installation of CpCleaner .";
-				fi
-			fi
-
-
 
 
 	if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] ; then

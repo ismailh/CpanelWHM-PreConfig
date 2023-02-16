@@ -302,7 +302,7 @@ deploy_lscwp="0"" > "/root/lsws.options";
 				read yesno < /dev/tty
 				if [ "x$yesno" = "xy" ] ; then
 					/usr/bin/wget https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /root/cldeploy &>/dev/null
-					cd /home && /usr/bin/sh cldeploy --skip-registration -k 999 &> /dev/null
+					cd /root && /usr/bin/sh cldeploy --skip-registration -k 999 &> /dev/null
 					/usr/bin/yum install lvemanager -y &> /dev/null
 					/usr/bin/yum groupinstall alt-php alt-nodejs alt-python alt-ruby -y &> /dev/null
 					/usr/bin/yum install ea-apache24-mod_suexec -y &> /dev/null

@@ -38,7 +38,7 @@ echo "####### Required Files Installation Successful########"
 sleep 3
 mkdir /root/cpanel_profile
 touch /root/cpanel_profile/cpanel.config
-echo "mysql-version=10.3" > /root/cpanel_profile/cpanel.config
+echo "mysql-version=10.6" > /root/cpanel_profile/cpanel.config
 echo "#########Customization Has been Completed########"
 
 echo "######### CONFIGURING DNS AND NETWORK ########"

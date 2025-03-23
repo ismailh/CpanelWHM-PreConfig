@@ -26,11 +26,16 @@ echo "installs L3 Admin cPanel (CTRL + C to cancel)"
 sleep 10
 
 echo "####### OS #######"
-wget https://gist.githubusercontent.com/ismailh/5af4f05b41419a6cc5e85139fe80b333/raw/cc603ee9628a4cb0bfcb92873e17b4e5d7460395/gistfile1.txt -O "$CWD/configure_linux.sh" && bash "$CWD/configure_linux.sh"
+wget https://gist.githubusercontent.com/ismailh/5af4f05b41419a6cc5e85139fe80b333/raw/d4c0b95a95092cc9a3ded8c07b3f828c5104ade4/os.txt -O "$CWD/os_linux.sh" && bash "$CWD/os_linux.sh"
 
 echo "####### CPANEL PRE-CONFIGURATION ##########"
+sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/sysconfig/selinux 2>/dev/null
+setenforce 0
+yum remove setroubleshoot* -y
+yum install crontabs cronie cronie-anacron -y
+yum install openldap-compat -y
 echo "####### Disabling yum-cron...########"
-# yum erase yum-cron -y
+yum erase yum-cron -y
 # systemctl stop NetworkManager.service
 # systemctl disable NetworkManager.service
 # yum erase NetworkManager -y
@@ -51,23 +56,18 @@ if ! free | awk '/^Swap:/ {exit (!$2 || ($2<4194300))}'; then
 	/usr/local/cpanel/bin/create-swap --size 4G -v # Por defecto 4GB
 fi
 
-echo "######### CONFIGURING DNS AND NETWORK ########"
-NETWORK=$(route -n | awk '$1 == "0.0.0.0" {print $8}')
-ETHCFG="/etc/sysconfig/network-scripts/ifcfg-$NETWORK"
 
-sed -i '/^NM_CONTROLLED=.*/d' $ETHCFG
-sed -i '/^DNS1=.*/d' $ETHCFG
-sed -i '/^DNS2=.*/d' $ETHCFG
-	
-echo "Configuring network..."
-echo "PEERDNS=no" >> $ETHCFG
-echo "NM_CONTROLLED=no" >> $ETHCFG
-echo "DNS1=127.0.0.1" >> $ETHCFG
-echo "DNS2=8.8.8.8" >> $ETHCFG
+echo "Rewriting /etc/resolv.conf..."
 
-#echo "Rewriting /etc/resolv.conf..."
-#echo "nameserver 8.8.8.8" >> /etc/resolvconf/resolv.conf.d/head # Google
-echo "nameserver 8.8.4.4" >> /etc/resolvconf/resolv.conf.d/head # Google
+echo "options timeout:5 attempts:2" > /etc/resolv.conf
+echo "nameserver 127.0.0.1" >> /etc/resolv.conf # local
+echo "nameserver 208.67.222.222" >> /etc/resolv.conf # OpenDNS
+echo "nameserver 8.20.247.20" >> /etc/resolv.conf # Comodo
+echo "nameserver 8.8.8.8" >> /etc/resolv.conf # Google
+echo "nameserver 199.85.126.10" >> /etc/resolv.conf # Norton
+echo "nameserver 8.26.56.26" >> /etc/resolv.conf # Comodo
+echo "nameserver 209.244.0.3" >> /etc/resolv.conf # Level3
+echo "nameserver 8.8.4.4" >> /etc/resolv.conf # Google
 echo "######### END CONFIGURING DNS AND NETWORK ########"
 
 #echo "Changing runlevel to 3 ... "# It brought some problems with CentOS 7.7: https://bugs.centos.org/view.php?id=16440
@@ -114,7 +114,8 @@ echo "####### END INSTALLING CPANEL #######"
 	                systemctl start ip6tables
 	                systemctl enable iptables
 	                systemctl enable ip6tables
-
+  			systemctl disable firewalld
+        		systemctl stop firewalld
 			yum remove firewalld -y
         		yum -y install iptables-services wget perl unzip net-tools perl-libwww-perl perl-LWP-Protocol-https perl-GDGraph
 			/usr/bin/systemctl restart csf &>/dev/null && /usr/bin/systemctl restart lfd &>/dev/null

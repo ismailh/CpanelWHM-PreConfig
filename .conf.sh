@@ -309,6 +309,7 @@ deploy_lscwp="0"" > "/root/lsws.options";
 				read yesno < /dev/tty
 				if [ "x$yesno" = "xy" ] ; then
 					/usr/bin/wget https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy && sh cldeploy -i 
+					cd /root && /usr/bin/sh cldeploy --skip-registration -k 999 &> /dev/null
 					/usr/bin/yum install lvemanager -y &> /dev/null
 					/usr/bin/yum groupinstall alt-php alt-nodejs alt-python alt-ruby -y &> /dev/null
 					/usr/bin/yum install ea-apache24-mod_suexec -y &> /dev/null
@@ -1056,7 +1057,6 @@ done
 /scripts/restartsrv_httpd
 /scripts/restartsrv_apache_php_fpm
 echo "Disabling Greylisting ..."
-whmapi 1 disable_cpgreylist
 
 echo "Deactivating Welcome Panel..."
 # https://support.cpanel.net/hc/en-us/articles/1500003456602-How-to-Disable-the-Welcome-Panel-Server-Wide-for-Newly-Created-Accounts

@@ -13,10 +13,6 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 > CMQ 
 
-> Remote MX Wizard
-
-> CpCleaner
-
 > Account DNS Check
 
 > Imunify360 
@@ -42,7 +38,7 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.con
 
 
 ### Database Default Install
-> MariaDB 10.3
+> MariaDB 10.6
 
 ### Default LSWS password you can change.
 * user = admin

@@ -40,6 +40,11 @@ mkdir /root/cpanel_profile
 touch /root/cpanel_profile/cpanel.config
 echo "mysql-version=10.6" > /root/cpanel_profile/cpanel.config
 echo "#########Customization Has been Completed########"
+# SWAP
+if ! free | awk '/^Swap:/ {exit (!$2 || ($2<4194300))}'; then
+	echo "SWAP no detectada o menos de 4GB. Configurando..."
+	/usr/local/cpanel/bin/create-swap --size 4G -v # Por defecto 4GB
+fi
 
 echo "######### CONFIGURING DNS AND NETWORK ########"
 NETWORK=$(route -n | awk '$1 == "0.0.0.0" {print $8}')
@@ -68,6 +73,7 @@ echo "####### INSTALLING CPANEL #######"
 if [ -f /usr/local/cpanel/cpanel ]; then
         echo "cPanel already detected, not installed, only configured (CTRL + C to cancel)"
         sleep 10
+	/usr/bin/systemctl enable network.service && /usr/bin/systemctl start network.service
 else
 	hostname -f > /root/hostname
 
@@ -97,14 +103,15 @@ echo "####### END INSTALLING CPANEL #######"
 			echo " Setting CSF..."
 
 			
-                    touch /etc/sysconfig/iptables
+                    	touch /etc/sysconfig/iptables
 	                touch /etc/sysconfig/iptables6
 	                systemctl start iptables
 	                systemctl start ip6tables
 	                systemctl enable iptables
 	                systemctl enable ip6tables
 
-
+			yum remove firewalld -y
+        		yum -y install iptables-services wget perl unzip net-tools perl-libwww-perl perl-LWP-Protocol-https perl-GDGraph
 			/usr/bin/systemctl restart csf &>/dev/null && /usr/bin/systemctl restart lfd &>/dev/null
 				echo "Done! CSF successfully installed & Config !";
 
@@ -301,8 +308,7 @@ deploy_lscwp="0"" > "/root/lsws.options";
 				echo -n "CloudLinux not found! Would you like to install? (y/n) ";
 				read yesno < /dev/tty
 				if [ "x$yesno" = "xy" ] ; then
-					/usr/bin/wget https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /root/cldeploy &>/dev/null
-					cd /root && /usr/bin/sh cldeploy --skip-registration -k 999 &> /dev/null
+					/usr/bin/wget https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy && sh cldeploy -i 
 					/usr/bin/yum install lvemanager -y &> /dev/null
 					/usr/bin/yum groupinstall alt-php alt-nodejs alt-python alt-ruby -y &> /dev/null
 					/usr/bin/yum install ea-apache24-mod_suexec -y &> /dev/null
@@ -398,6 +404,7 @@ whmapi1 set_tweaksetting key=php_post_max_size value=100
 whmapi1 set_tweaksetting key=php_upload_max_filesize value=100
 whmapi1 set_tweaksetting key=empty_trash_days value=30
 whmapi1 set_tweaksetting key=publichtmlsubsonly value=0
+whmapi1 set_tweaksetting key=proxysubdomainsoverride value=0
 whmapi1 set_tweaksetting key=phploader value=ioncube
 whmapi1 set_tweaksetting key=cookieipvalidation value=strict
 whmapi1 set_tweaksetting key=referrerblanksafety value=1
@@ -487,6 +494,7 @@ echo "SETTING exim..."
 /usr/bin/sed -i 's/^max_spam_scan_size=.*/max_spam_scan_size=1000/' /etc/exim.conf.localopts
 /usr/bin/sed -i 's/^openssl_options=.*/openssl_options= +no_sslv2 +no_sslv3/' /etc/exim.conf.localopts
 /usr/bin/sed -i 's/^tls_require_ciphers=.*/tls_require_ciphers=ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS/' /etc/exim.conf.localopts
+/usr/bin/sed -i 's/^message_linelength_limit=.*/message_linelength_limit=4096/' /etc/exim.conf.localopts # https://support.cpanel.net/hc/en-us/articles/4420121088919-Exim-4-95-message-has-lines-too-long-for-transport-Error
 
 # Installing PHP extensions for popular CMS
 		if [ -f /etc/redhat-release ]; then
@@ -530,15 +538,27 @@ echo "SETTING exim..."
 # LIMIT OF ATTACHMENTS
 sed -i '/^message_size_limit.*/d' /etc/exim.conf.local
 if grep "@CONFIG@" /etc/exim.conf.local > /dev/null; then
-        sed -i '/@CONFIG@/ a message_size_limit = 25M' /etc/exim.conf.local
+        sed -i '/@CONFIG@/ a message_size_limit = 50M' /etc/exim.conf.local
 else
         echo "@CONFIG@" >> /etc/exim.conf.local
         echo "" >> /etc/exim.conf.local
-        sed -i '/@CONFIG@/ a message_size_limit = 25M' /etc/exim.conf.local
+        sed -i '/@CONFIG@/ a message_size_limit = 50M' /etc/exim.conf.local
 fi
+
+/usr/local/cpanel/libexec/tailwatchd --disable=Cpanel::TailWatch::RecentAuthedMailIpTracker
+
 
 /scripts/buildeximconf
 echo "Installing EasyApache 4 PHP packages..."
+if grep -i "Almalinux" /etc/redhat-release > /dev/null; then
+        # https://support.cpanel.net/hc/en-us/articles/14191689268375-How-to-Install-the-Sodium-Cryptographic-Library-libsodium-and-PHP-Extension-on-AlmaLinux-8-and-CloudLinux-8
+        dnf install libsodium libsodium-devel -y
+else # CENTOS 7
+        # https://support.cpanel.net/hc/en-us/articles/360056786594-How-to-Install-the-Sodium-Cryptographic-Library-libsodium-and-PHP-Extension-on-CentOS-7-and-CloudLinux-7
+        yum install epel-release -y
+        yum install libsodium libsodium-devel -y
+fi
+
 yum install -y \
 ea-apache24-mod_proxy_fcgi \
 libcurl-devel \
@@ -785,6 +805,65 @@ ea-php81-php-sodium \
 ea-php81-php-xml \
 ea-php81-php-zip \
 ea-php81-runtime \
+ea-php82 \
+ea-php82-pear \
+ea-php82-php-cli \
+ea-php82-php-common \
+ea-php82-php-curl \
+ea-php82-php-devel \
+ea-php82-php-exif \
+ea-php82-php-fileinfo \
+ea-php82-php-ftp \
+ea-php82-php-gd \
+ea-php82-php-iconv \
+ea-php82-php-intl \
+ea-php82-php-litespeed \
+ea-php82-php-mbstring \
+ea-php82-php-mysqlnd \
+ea-php82-php-opcache \
+ea-php82-php-pdo \
+ea-php82-php-posix \
+ea-php82-php-soap \
+ea-php82-php-zip \
+ea-php82-runtime \
+ea-php82-php-bcmath \
+ea-php82-php-gettext \
+ea-php82-php-gmp \
+ea-php82-php-xml \
+ea-php82-php-imap \
+ea-php82-php-sodium \
+ea-php82-php-ioncube13 \
+ea-php82-php-calendar \
+ea-php83 \
+ea-php83-pear \
+ea-php83-php-cli \
+ea-php83-php-common \
+ea-php83-php-curl \
+ea-php83-php-devel \
+ea-php83-php-exif \
+ea-php83-php-fileinfo \
+ea-php83-php-ftp \
+ea-php83-php-gd \
+ea-php83-php-iconv \
+ea-php83-php-intl \
+ea-php83-php-litespeed \
+ea-php83-php-mbstring \
+ea-php83-php-mysqlnd \
+ea-php83-php-opcache \
+ea-php83-php-pdo \
+ea-php83-php-posix \
+ea-php83-php-soap \
+ea-php83-php-zip \
+ea-php83-runtime \
+ea-php83-php-bcmath \
+ea-php83-php-gettext \
+ea-php83-php-gmp \
+ea-php83-php-xml \
+ea-php83-php-imap \
+ea-php83-php-sodium \
+ea-php83-php-ioncube14 \
+ea-php83-php-calendar \
+--skip-broken
 
 --skip-broken
 echo "Setting EasyApache 4 PHP..."
@@ -818,12 +897,14 @@ EOF
 /usr/local/cpanel/scripts/php_fpm_config --rebuild
 /scripts/restartsrv_apache_php_fpm
 echo "Configuring Handlers..."
-whmapi1 php_set_handler version=ea-php55 handler=cgi
-whmapi1 php_set_handler version=ea-php56 handler=cgi
-whmapi1 php_set_handler version=ea-php70 handler=cgi
-whmapi1 php_set_handler version=ea-php71 handler=cgi
-whmapi1 php_set_handler version=ea-php72 handler=cgi
-whmapi1 php_set_system_default_version version=ea-php72
+whmapi1 php_set_handler version=ea-php73 handler=cgi
+whmapi1 php_set_handler version=ea-php74 handler=cgi
+whmapi1 php_set_handler version=ea-php80 handler=cgi
+whmapi1 php_set_handler version=ea-php81 handler=cgi
+whmapi1 php_set_handler version=ea-php82 handler=cgi
+whmapi1 php_set_handler version=ea-php83 handler=cgi
+whmapi1 php_set_system_default_version version=ea-php82
+
 echo "Configuring PHP-FPM..."
 whmapi1 php_set_default_accounts_to_fpm default_accounts_to_fpm=1
 whmapi1 convert_all_domains_to_fpm
@@ -864,6 +945,10 @@ if [ $ISVPS = "NO" ]; then
 	disable_rule 210831 modsec_vendor_configs/comodo_apache/03_Global_Agents.conf
 fi
 echo "Configuring MySQL..."
+whmapi1 set_tweaksetting key=mycnf_auto_adjust_maxallowedpacket value=1
+whmapi1 set_tweaksetting key=mycnf_auto_adjust_openfiles_limit value=1
+whmapi1 set_tweaksetting key=mycnf_auto_adjust_innodb_buffer_pool_size value=1
+
 sed -i '/^local-infile.*/d' /etc/my.cnf
 sed -i '/^query_cache_type.*/d' /etc/my.cnf
 sed -i '/^query_cache_size.*/d' /etc/my.cnf
@@ -883,7 +968,7 @@ sed  -i '/\[mysqld\]/a max_heap_table_size=256M' /etc/my.cnf
 sed  -i '/\[mysqld\]/a # WNPower pre-configured values' /etc/my.cnf
 /scripts/restartsrv_mysql
 echo "Updating a MariaDB 10.3..."
-whmapi1 start_background_mysql_upgrade version=10.3
+whmapi1 start_background_mysql_upgrade version=10.6
 echo "Configuring disabled features..."
 whmapi 1 update_featurelist featurelist = disabled api_shell = 0 agora = 0 analog = 0 boxtrapper = 0 traceaddy = 0 modules-php-pear = 0 modules-perl = 0 modules-ruby = 0 pgp = 0 phppgadmin = 0 postgres = 0 ror = 0 serverstatus = 0 webalizer = 0 clamavconnector_scan = 0 lists = 0
 echo "defaultSetting features..."
@@ -921,14 +1006,19 @@ whmapi1 set_autossl_metadata_key key=notify_autossl_renewal_coverage_reduced val
 whmapi1 set_autossl_metadata_key key=notify_autossl_renewal_uncovered_domains value=0
 echo "Disabling cPHulk..."
 whmapi1 disable_cphulk
+
 echo "Activating Header Authorization in CGI..."
 sed -i '/# ACTIVATE HEADER AUTHORIZATION CGI/,/# END ACTIVATE HEADER AUTHORIZATION CGI/d' /etc/apache2/conf.d/includes/pre_main_global.conf
+
 cat >> /etc/apache2/conf.d/includes/pre_main_global.conf << 'EOF'
 # START ACTIVATE HEADER AUTHORIZATION CGI
 SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 # END ACTIVATE HEADER AUTHORIZATION CGI
+
 EOF
+
 /scripts/restartsrv_apache
+
 echo "Activating 2FA..."
 /usr/local/cpanel/bin/whmapi1 twofactorauth_enable_policy
 echo "Patch Webmail x3 error..."
@@ -968,6 +1058,12 @@ done
 echo "Disabling Greylisting ..."
 whmapi 1 disable_cpgreylist
 
+echo "Deactivating Welcome Panel..."
+# https://support.cpanel.net/hc/en-us/articles/1500003456602-How-to-Disable-the-Welcome-Panel-Server-Wide-for-Newly-Created-Accounts
+mkdir -pv /root/cpanel3-skel/.cpanel/nvdata; echo "1" > /root/cpanel3-skel/.cpanel/nvdata/xmainwelcomedismissed
+
+echo "config RPMs de cPanel..." # A veces queda alguno corrupto
+/usr/local/cpanel/scripts/check_cpanel_pkgs --fix
 
 if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/whmreseller ] ; then
 			echo "WHMReseller is already installed on the server!";

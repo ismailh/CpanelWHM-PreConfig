@@ -6,6 +6,8 @@ Automated scripts to install and configure cPanel/WHM &amp; Litespeed and Cloudl
 ```
 curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.conf.sh | bash
 ```
+
+> SSH Port : 1337
 ## Include Software?
 > CSF
 

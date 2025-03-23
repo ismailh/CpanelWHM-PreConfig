@@ -25,12 +25,16 @@ echo ""
 echo "installs L3 Admin cPanel (CTRL + C to cancel)"
 sleep 10
 
+echo "####### OS #######"
+wget https://gist.githubusercontent.com/ismailh/5af4f05b41419a6cc5e85139fe80b333/raw/cc603ee9628a4cb0bfcb92873e17b4e5d7460395/gistfile1.txt -O "$CWD/configure_linux.sh" && bash "$CWD/configure_linux.sh"
+
 echo "####### CPANEL PRE-CONFIGURATION ##########"
 echo "####### Disabling yum-cron...########"
-yum erase yum-cron -y
-systemctl stop NetworkManager.service
-systemctl disable NetworkManager.service
-yum erase NetworkManager -y
+# yum erase yum-cron -y
+# systemctl stop NetworkManager.service
+# systemctl disable NetworkManager.service
+# yum erase NetworkManager -y
+yum install resolvconf -y
 yum install nano wget epel-release -y
 yum install screen -y
 yum clean all
@@ -39,6 +43,7 @@ sleep 3
 mkdir /root/cpanel_profile
 touch /root/cpanel_profile/cpanel.config
 echo "mysql-version=10.6" > /root/cpanel_profile/cpanel.config
+
 echo "#########Customization Has been Completed########"
 # SWAP
 if ! free | awk '/^Swap:/ {exit (!$2 || ($2<4194300))}'; then
@@ -60,9 +65,9 @@ echo "NM_CONTROLLED=no" >> $ETHCFG
 echo "DNS1=127.0.0.1" >> $ETHCFG
 echo "DNS2=8.8.8.8" >> $ETHCFG
 
-echo "Rewriting /etc/resolv.conf..."
-echo "nameserver 8.8.8.8" >> /etc/resolv.conf # Google
-echo "nameserver 8.8.4.4" >> /etc/resolv.conf # Google
+#echo "Rewriting /etc/resolv.conf..."
+#echo "nameserver 8.8.8.8" >> /etc/resolvconf/resolv.conf.d/head # Google
+echo "nameserver 8.8.4.4" >> /etc/resolvconf/resolv.conf.d/head # Google
 echo "######### END CONFIGURING DNS AND NETWORK ########"
 
 #echo "Changing runlevel to 3 ... "# It brought some problems with CentOS 7.7: https://bugs.centos.org/view.php?id=16440

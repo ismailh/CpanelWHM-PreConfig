@@ -335,24 +335,119 @@ _install_csf() {
     log_section "CSF Firewall — Install"
     if [ -d /etc/csf ]; then
         log_ok "CSF already installed — skipping install"
-    else
-        if echo "$OS" | grep -iq "ubuntu\|debian"; then
-            apt-get install -y iptables iptables-persistent wget perl unzip net-tools \
-                libwww-perl liblwp-protocol-https-perl libgd-graph-perl sendmail 2>/dev/null || true
-            ufw disable 2>/dev/null || true
-        else
-            local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
-            touch /etc/sysconfig/iptables /etc/sysconfig/iptables6
-            systemctl enable --now iptables ip6tables 2>/dev/null || true
-            $PKG install -y iptables-services wget perl unzip net-tools \
-                perl-libwww-perl perl-LWP-Protocol-https perl-GDGraph 2>/dev/null || true
-        fi
-        cd /usr/src
-        wget -q https://download.configserver.com/csf.tgz -O /usr/src/csf.tgz
-        tar -xzf /usr/src/csf.tgz -C /usr/src && cd /usr/src/csf && sh install.sh
-        cd /root && rm -rf /usr/src/csf /usr/src/csf.tgz
-        log_ok "CSF installed"
+        return 0
     fi
+
+    log_info "Installing CSF dependencies for $OS $VER..."
+
+    # ── OS-specific dependency install ──
+    if echo "$OS" | grep -iq "centos" && [ "$OS_MAJOR" = "7" ]; then
+        # CentOS 7 (yum only)
+        yum install -y epel-release 2>/dev/null || true
+        yum install -y iptables-services wget perl unzip net-tools \
+            perl-libwww-perl perl-LWP-Protocol-https perl-GDGraph \
+            perl-IO-Socket-INET6 perl-Socket6 perl-Crypt-SSLeay \
+            perl-Net-SSLeay perl-IO-Socket-SSL 2>/dev/null || true
+        touch /etc/sysconfig/iptables /etc/sysconfig/iptables6
+        systemctl enable --now iptables ip6tables 2>/dev/null || true
+
+    elif echo "$OS" | grep -iq "centos\|almalinux\|rocky"; then
+        # CentOS Stream 8/9, AlmaLinux 8/9, Rocky 8/9 (dnf)
+        dnf install -y epel-release 2>/dev/null || true
+        dnf install -y iptables-services wget perl unzip net-tools \
+            perl-libwww-perl perl-LWP-Protocol-https perl-GDGraph \
+            perl-IO-Socket-INET6 perl-Socket6 perl-Crypt-SSLeay \
+            perl-Net-SSLeay perl-IO-Socket-SSL 2>/dev/null || true
+        touch /etc/sysconfig/iptables /etc/sysconfig/iptables6
+        systemctl enable --now iptables ip6tables 2>/dev/null || true
+
+    elif echo "$OS" | grep -iq "ubuntu"; then
+        # Ubuntu 20.04 / 22.04 / 24.04
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y 2>/dev/null || true
+        apt-get install -y iptables wget perl unzip net-tools sendmail \
+            libwww-perl liblwp-protocol-https-perl libgd-graph-perl \
+            libio-socket-inet6-perl libsocket6-perl libcrypt-ssleay-perl \
+            libnet-ssleay-perl libio-socket-ssl-perl 2>/dev/null || true
+        # Ubuntu 24+ uses nftables backend; ensure iptables works
+        update-alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true
+        ufw disable 2>/dev/null || true
+        systemctl disable ufw 2>/dev/null || true
+
+    elif echo "$OS" | grep -iq "debian"; then
+        # Debian 11 / 12
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y 2>/dev/null || true
+        apt-get install -y iptables wget perl unzip net-tools sendmail \
+            libwww-perl liblwp-protocol-https-perl libgd-graph-perl \
+            libio-socket-inet6-perl libsocket6-perl libcrypt-ssleay-perl \
+            libnet-ssleay-perl libio-socket-ssl-perl 2>/dev/null || true
+        update-alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true
+        update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true
+
+    else
+        log_warn "Unknown OS ($OS) — trying generic RHEL install"
+        yum install -y iptables-services wget perl unzip net-tools \
+            perl-libwww-perl perl-LWP-Protocol-https perl-GDGraph 2>/dev/null || true
+    fi
+
+    # ── Install CSF ──
+    log_info "Installing CSF via cPanel package (cpanel-csf)..."
+    local CSF_INSTALLED=0
+
+    if echo "$OS" | grep -iq "ubuntu\|debian"; then
+        apt-get install -y cpanel-csf 2>/dev/null && CSF_INSTALLED=1
+    elif echo "$OS" | grep -iq "centos" && [ "$OS_MAJOR" = "7" ]; then
+        yum install -y cpanel-csf 2>/dev/null && CSF_INSTALLED=1
+    else
+        dnf install -y cpanel-csf 2>/dev/null && CSF_INSTALLED=1
+    fi
+
+    # Fallback 1: manual download from configserver.com
+    if [ "$CSF_INSTALLED" -eq 0 ]; then
+        log_warn "cpanel-csf package not available — trying configserver.com..."
+        cd /usr/src
+        wget -q https://download.configserver.com/csf.tgz -O /usr/src/csf.tgz 2>/dev/null
+        if [ -f /usr/src/csf.tgz ] && [ -s /usr/src/csf.tgz ]; then
+            tar -xzf /usr/src/csf.tgz -C /usr/src && cd /usr/src/csf && sh install.sh
+            cd /root && rm -rf /usr/src/csf /usr/src/csf.tgz
+            CSF_INSTALLED=1
+        fi
+    fi
+
+    # Fallback 2: alternative mirror (csf.black.host)
+    if [ "$CSF_INSTALLED" -eq 0 ]; then
+        log_warn "configserver.com failed — trying alternative mirror (csf.black.host)..."
+        if bash <(wget -qO - https://csf.black.host) 2>/dev/null; then
+            CSF_INSTALLED=1
+        elif bash <(curl -sSL https://csf.black.host) 2>/dev/null; then
+            CSF_INSTALLED=1
+        fi
+    fi
+
+    # All methods failed
+    if [ "$CSF_INSTALLED" -eq 0 ]; then
+        log_error "CSF install failed from all sources!"
+        log_error "  Try manually: dnf install cpanel-csf"
+        log_error "  Or: bash <(wget -qO - https://csf.black.host)"
+        return 1
+    fi
+
+    # ── Post-install: disable firewalld/ufw, start CSF ──
+    systemctl disable firewalld 2>/dev/null || true
+    systemctl stop firewalld 2>/dev/null || true
+    ufw disable 2>/dev/null || true
+
+    # Ensure CSF perl test passes
+    perl /usr/local/csf/bin/csftest.pl 2>/dev/null || true
+
+    # Start CSF + LFD
+    systemctl enable csf lfd 2>/dev/null || true
+    systemctl restart csf 2>/dev/null || csf -r 2>/dev/null || true
+    systemctl restart lfd 2>/dev/null || true
+
+    log_ok "CSF installed successfully on $OS $VER"
 }
 
 _configure_csf() {
@@ -466,9 +561,20 @@ check_install_cmq() {
     if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq.cgi ]; then
         log_ok "CMQ already installed"; return 0; fi
     if ! ask_yn "CMQ not found. Install?"; then log_warn "CMQ skipped"; return 0; fi
-    cd /tmp && wget -q https://download.configserver.com/cmq.tgz && tar -xzf cmq.tgz
-    cd cmq && sh install.sh && cd /root && rm -rf /tmp/cmq /tmp/cmq.tgz
-    log_ok "CMQ installed"
+    rm -rf /usr/src/cmq /usr/src/cmq.tgz 2>/dev/null || true
+
+    # Try GitHub mirror first, then configserver.com
+    wget -q https://github.com/systechICTltd/ConfigServer-Scripts/raw/main/cmq.tgz -O /usr/src/cmq.tgz 2>/dev/null || \
+    wget -q https://download.configserver.com/cmq.tgz -O /usr/src/cmq.tgz 2>/dev/null || true
+
+    if [ -f /usr/src/cmq.tgz ] && [ -s /usr/src/cmq.tgz ]; then
+        tar -xzf /usr/src/cmq.tgz -C /usr/src
+        cd /usr/src/cmq && sh install.sh
+        cd /root && rm -rf /usr/src/cmq /usr/src/cmq.tgz
+        log_ok "CMQ installed"
+    else
+        log_error "CMQ download failed from all sources"
+    fi
 }
 
 check_install_dns_check() {

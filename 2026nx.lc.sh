@@ -4,6 +4,7 @@
 # Version: 2.0.0
 # All messages in English
 # SSH Port: 1337
+#
 # Supported OS:
 #   Ubuntu 20.04/22.04/24.04 LTS
 #   CentOS 7, CentOS Stream 8/9
@@ -467,21 +468,29 @@ _configure_csf() {
         [LF_PERMBLOCK_INTERVAL]="14400" [LF_INTERVAL]="900"
         [PS_INTERVAL]="60" [PS_LIMIT]="60"
         [DYNDNS]="300" [DYNDNS_IGNORE]="1"
+        # From ref: csf.sh — additional hardening
+        [RESTRICT_SYSLOG]="3"
+        [LF_SCRIPT_ALERT]="1"
+        [LF_CPANEL_ALERT]="1"
+        [SYSLOG_CHECK]="700"
+        [LF_PERMBLOCK_COUNT]="20"
+        [LF_SYMLINK]="2"
+        [LF_SYMLINK_PERM]="5"
     )
     for key in "${!CSF_SETTINGS[@]}"; do
         sed -i "s/^${key} = .*/${key} = \"${CSF_SETTINGS[$key]}\"/g" "$CSF"
     done
 
-    # Disable alerts
+    # Disable alerts (except LF_CPANEL_ALERT which stays =1 per ref)
     for alert in LF_PERMBLOCK_ALERT LF_NETBLOCK_ALERT LF_EMAIL_ALERT \
-        LF_CPANEL_ALERT LF_QUEUE_ALERT LF_DISTFTP_ALERT LF_DISTSMTP_ALERT \
+        LF_QUEUE_ALERT LF_DISTFTP_ALERT LF_DISTSMTP_ALERT \
         LT_EMAIL_ALERT RT_RELAY_ALERT RT_AUTHRELAY_ALERT RT_POPRELAY_ALERT \
         RT_LOCALRELAY_ALERT RT_LOCALHOSTRELAY_ALERT CT_EMAIL_ALERT \
         PT_USERKILL_ALERT PS_EMAIL_ALERT PT_USERMEM PT_USERTIME PT_USERPROC PT_USERRSS; do
         sed -i "s/^${alert} = .*/${alert} = \"0\"/g" "$CSF"
     done
 
-    # Add SSH port 1337 to TCP_IN/TCP_OUT
+    # Add SSH port 1337 + cPanel alt port 1157 to TCP_IN/TCP_OUT
     for D in TCP_IN TCP_OUT TCP6_IN TCP6_OUT; do
         CURR=$(grep "^${D}" "$CSF" | cut -d'=' -f2 | sed 's/ //g;s/"//g')
         echo "$CURR" | grep -q "$SSH_PORT" || \
@@ -779,32 +788,37 @@ php-fpm php-ldap php-xmlrpc php-sockets"
 
     # PHP.ini global settings
     log_info "Configuring PHP.ini for all versions..."
+
+    # Direct EA-PHP path method (most reliable for all PHP versions)
+    /usr/bin/sed -i 's/memory_limit = .*/memory_limit = 1024M/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/max_execution_time = .*/max_execution_time = 200/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/max_input_time = .*/max_input_time = 200/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/max_input_vars = .*/max_input_vars = 3000/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/post_max_size = .*/post_max_size = 100M/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/upload_max_filesize = .*/upload_max_filesize = 100M/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/allow_url_fopen = .*/allow_url_fopen = On/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/file_uploads = .*/file_uploads = On/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/expose_php = .*/expose_php = Off/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/enable_dl = .*/enable_dl = Off/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/display_errors = .*/display_errors = Off/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/track_errors = .*/track_errors = Off/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/html_errors = .*/html_errors = Off/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/error_reporting = .*/error_reporting = E_ALL \& ~E_DEPRECATED \& ~E_STRICT/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    # Uncomment and set default_charset
+    /usr/bin/sed -i 's/^;default_charset = "UTF-8"/default_charset = "UTF-8"/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    /usr/bin/sed -i 's/^default_charset = .*/default_charset = "UTF-8"/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    # Set timezone to UTC (universal default — users can override per-account)
+    /usr/bin/sed -i 's|^;*date.timezone.*|date.timezone = "UTC"|' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+    # Security: disable dangerous PHP functions (shared hosting hardening)
+    /usr/bin/sed -i 's/^disable_functions.*/disable_functions = apache_get_modules,apache_get_version,apache_getenv,apache_note,apache_setenv,disk_free_space,diskfreespace,dl,exec,highlight_file,ini_alter,ini_restore,openlog,passthru,phpinfo,popen,posix_getpwuid,proc_close,proc_get_status,proc_nice,proc_open,proc_terminate,shell_exec,show_source,symlink,system,eval,debug_zval_dump/' /opt/cpanel/ea-php*/root/etc/php.ini &>/dev/null || true
+
+    # Also apply key settings to local.ini overrides
     find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
         's/^memory_limit.*/memory_limit = 1024M/g' 2>/dev/null || true
     find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
         's/^upload_max_filesize.*/upload_max_filesize = 100M/g' 2>/dev/null || true
     find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
         's/^post_max_size.*/post_max_size = 100M/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^max_execution_time.*/max_execution_time = 200/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^max_input_time.*/max_input_time = 200/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^max_input_vars.*/max_input_vars = 3000/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^expose_php.*/expose_php = Off/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^enable_dl.*/enable_dl = Off/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^allow_url_fopen.*/allow_url_fopen = On/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^file_uploads.*/file_uploads = On/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^display_errors.*/display_errors = Off/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^default_charset.*/default_charset = "UTF-8"/g' 2>/dev/null || true
-    find /opt/ \( -name "php.ini" -o -name "local.ini" \) 2>/dev/null | xargs -r sed -i \
-        's/^error_reporting.*/error_reporting = E_ALL \& ~E_DEPRECATED \& ~E_STRICT/g' 2>/dev/null || true
 
     # PHP-FPM defaults
     mkdir -p /var/cpanel/ApachePHPFPM
@@ -888,12 +902,23 @@ configure_whm_tweaks() {
     sed -i 's/^phpopenbasedirhome=.*/phpopenbasedirhome=1/' /var/cpanel/cpanel.config 2>/dev/null || true
     sed -i 's/^minpwstrength=.*/minpwstrength=70/' /var/cpanel/cpanel.config 2>/dev/null || true
     sed -i 's/^phploader=.*/phploader=ioncube,sourceguardian/' /var/cpanel/cpanel.config 2>/dev/null || true
+    sed -i 's/^enforce_user_account_limits=.*/enforce_user_account_limits=1/' /var/cpanel/cpanel.config 2>/dev/null || true
+    sed -i 's/^emailusers_diskusage_warn_contact_admin=.*/emailusers_diskusage_warn_contact_admin=1/' /var/cpanel/cpanel.config 2>/dev/null || true
+    sed -i 's/^emailsperdaynotify=.*/emailsperdaynotify=1000/' /var/cpanel/cpanel.config 2>/dev/null || true
+    sed -i 's/^exim-retrytime=.*/exim-retrytime=30/' /var/cpanel/cpanel.config 2>/dev/null || true
+
+    # Shell Fork Bomb Protection
+    /usr/local/cpanel/bin/install-login-profile --install limits 2>/dev/null || true
 
     # AutoSSL — Let's Encrypt
     whmapi1 set_autossl_provider provider="LetsEncrypt" terms_of_service_accepted=1 2>/dev/null || true
     whmapi1 set_autossl_metadata_key key=clobber_externally_signed value=1 2>/dev/null || true
     whmapi1 set_autossl_metadata_key key=notify_autossl_expiry value=0 2>/dev/null || true
+    whmapi1 set_autossl_metadata_key key=notify_autossl_expiry_coverage value=0 2>/dev/null || true
     whmapi1 set_autossl_metadata_key key=notify_autossl_renewal value=0 2>/dev/null || true
+    whmapi1 set_autossl_metadata_key key=notify_autossl_renewal_coverage value=0 2>/dev/null || true
+    whmapi1 set_autossl_metadata_key key=notify_autossl_renewal_coverage_reduced value=0 2>/dev/null || true
+    whmapi1 set_autossl_metadata_key key=notify_autossl_renewal_uncovered_domains value=0 2>/dev/null || true
 
     # Disable cPHulk (CSF handles brute-force)
     whmapi1 disable_cphulk 2>/dev/null || true
@@ -927,6 +952,21 @@ configure_whm_tweaks() {
     # Exim config
     sed -i 's/^per_domain_mailips=.*/per_domain_mailips=1/' /etc/exim.conf.localopts 2>/dev/null || true
     sed -i 's/^max_spam_scan_size=.*/max_spam_scan_size=1000/' /etc/exim.conf.localopts 2>/dev/null || true
+
+    # Exim attachment size limit (50M)
+    log_info "Setting Exim message_size_limit to 50M..."
+    sed -i '/^message_size_limit.*/d' /etc/exim.conf.local 2>/dev/null || true
+    if grep -q "@CONFIG@" /etc/exim.conf.local 2>/dev/null; then
+        sed -i '/@CONFIG@/ a message_size_limit = 50M' /etc/exim.conf.local
+    else
+        echo "@CONFIG@" >> /etc/exim.conf.local
+        echo "" >> /etc/exim.conf.local
+        sed -i '/@CONFIG@/ a message_size_limit = 50M' /etc/exim.conf.local
+    fi
+
+    # Disable RecentAuthedMailIpTracker (reduces overhead)
+    /usr/local/cpanel/libexec/tailwatchd --disable=Cpanel::TailWatch::RecentAuthedMailIpTracker 2>/dev/null || true
+
     /scripts/buildeximconf 2>/dev/null || true
 
     # Header Authorization CGI

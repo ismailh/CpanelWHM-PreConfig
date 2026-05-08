@@ -667,21 +667,93 @@ check_install_litespeed() {
     if [ -f /usr/local/lsws/bin/lshttpd ]; then
         log_ok "LiteSpeed already installed"; return 0; fi
     if ! ask_yn "LiteSpeed not found. Install?"; then log_warn "Skipped"; return 0; fi
+
     echo "  [1] Trial License (15 days)"
     echo "  [2] Serial Number"
-    echo "  [3] Free (up to 2GB RAM)"
+    echo "  [3] OpenLiteSpeed Free"
     read -rp "  Select [1/2/3]: " LS_OPT </dev/tty
     case "$LS_OPT" in
         2) read -rp "  Serial: " LS_SERIAL </dev/tty ;;
-        3) LS_SERIAL="FREE" ;;
+        3) LS_SERIAL="0" ;;
         *) LS_SERIAL="TRIAL" ;;
     esac
-    wget -q https://www.litespeedtech.com/packages/cpanel/lsws_whm_autoinstaller.sh -O /tmp/lsws.sh
-    chmod +x /tmp/lsws.sh && echo "$LS_SERIAL" | bash /tmp/lsws.sh
+
+    local LS_INSTALLED=0
+
+    # Method 1: LiteSpeed repo + WHM plugin (works on all cPanel OS)
+    log_info "Installing LiteSpeed via WHM plugin..."
+    if echo "$OS" | grep -iq "centos" && [ "$OS_MAJOR" = "7" ]; then
+        # CentOS 7
+        rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el7.noarch.rpm 2>/dev/null || true
+        yum install -y lsws 2>/dev/null && LS_INSTALLED=1
+    elif echo "$OS" | grep -iq "centos\|almalinux\|rocky"; then
+        # RHEL 8/9 family
+        rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el8.noarch.rpm 2>/dev/null || \
+        rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el9.noarch.rpm 2>/dev/null || true
+        dnf install -y lsws 2>/dev/null && LS_INSTALLED=1
+    elif echo "$OS" | grep -iq "ubuntu"; then
+        # Ubuntu 20/22/24
+        wget -qO - https://rpms.litespeedtech.com/debian/lst_debian_repo.gpg | apt-key add - 2>/dev/null || true
+        wget -qO - https://rpms.litespeedtech.com/debian/lst_repo.gpg | gpg --dearmor -o /usr/share/keyrings/lst-keyring.gpg 2>/dev/null || true
+        CODENAME=$(lsb_release -sc 2>/dev/null || echo "focal")
+        echo "deb [signed-by=/usr/share/keyrings/lst-keyring.gpg] http://rpms.litespeedtech.com/debian/ $CODENAME main" \
+            > /etc/apt/sources.list.d/lst_debian_repo.list 2>/dev/null || true
+        apt-get update -y 2>/dev/null || true
+        apt-get install -y lsws 2>/dev/null && LS_INSTALLED=1
+    elif echo "$OS" | grep -iq "debian"; then
+        # Debian 11/12
+        wget -qO - https://rpms.litespeedtech.com/debian/lst_repo.gpg | gpg --dearmor -o /usr/share/keyrings/lst-keyring.gpg 2>/dev/null || true
+        CODENAME=$(lsb_release -sc 2>/dev/null || echo "bullseye")
+        echo "deb [signed-by=/usr/share/keyrings/lst-keyring.gpg] http://rpms.litespeedtech.com/debian/ $CODENAME main" \
+            > /etc/apt/sources.list.d/lst_debian_repo.list 2>/dev/null || true
+        apt-get update -y 2>/dev/null || true
+        apt-get install -y lsws 2>/dev/null && LS_INSTALLED=1
+    fi
+
+    # Method 2: Fallback to WHM autoinstaller script
+    if [ "$LS_INSTALLED" -eq 0 ]; then
+        log_warn "Repo install failed — trying WHM autoinstaller..."
+        wget -q https://www.litespeedtech.com/packages/cpanel/lsws_whm_autoinstaller.sh -O /tmp/lsws.sh 2>/dev/null || \
+        curl -sSL https://www.litespeedtech.com/packages/cpanel/lsws_whm_autoinstaller.sh -o /tmp/lsws.sh 2>/dev/null || true
+        if [ -f /tmp/lsws.sh ] && [ -s /tmp/lsws.sh ]; then
+            chmod +x /tmp/lsws.sh
+            echo "$LS_SERIAL" | bash /tmp/lsws.sh 2>/dev/null && LS_INSTALLED=1
+            rm -f /tmp/lsws.sh
+        fi
+    fi
+
+    if [ "$LS_INSTALLED" -eq 0 ]; then
+        log_error "LiteSpeed install failed on $OS $VER"
+        log_error "  Try manually: https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:cpanel:whm-plugin-install"
+        return 1
+    fi
+
+    # Set license
+    if [ "$LS_SERIAL" != "TRIAL" ] && [ "$LS_SERIAL" != "0" ] && [ -n "$LS_SERIAL" ]; then
+        /usr/local/lsws/bin/lshttpd -r "$LS_SERIAL" 2>/dev/null || true
+    fi
+
+    # Install LSCache Manager plugin for WHM
     /usr/local/lsws/admin/misc/lscmctl install 2>/dev/null || true
-    systemctl enable --now lsws 2>/dev/null || true
-    rm -f /tmp/lsws.sh
-    log_ok "LiteSpeed installed"
+
+    # Enable and start
+    systemctl enable lsws 2>/dev/null || true
+    systemctl start lsws 2>/dev/null || true
+    /usr/local/lsws/bin/lswsctrl start 2>/dev/null || true
+
+    # Open LiteSpeed admin ports in CSF if present
+    if [ -f /etc/csf/csf.conf ]; then
+        for D in TCP_IN TCP_OUT; do
+            CURR=$(grep "^${D}" /etc/csf/csf.conf | cut -d'=' -f2 | sed 's/ //g;s/"//g')
+            for P in 7080 7443; do
+                echo "$CURR" | grep -q "$P" || CURR="${CURR},${P}"
+            done
+            sed -i "s/^${D}.*/${D} = \"${CURR}\"/" /etc/csf/csf.conf
+        done
+        csf -r 2>/dev/null || true
+    fi
+
+    log_ok "LiteSpeed installed on $OS $VER"
 }
 
 # ═══════════════════════════════════════════
@@ -886,6 +958,7 @@ configure_whm_tweaks() {
         [enable_piped_logs]=1 [email_outbound_spam_detect_action]=block
         [email_outbound_spam_detect_enable]=1 [email_outbound_spam_detect_threshold]=120
         [skipspambox]=0 [skipmailman]=1 [jaildefaultshell]=1
+        [proxysubdomains]=0
         [php_post_max_size]=100 [php_upload_max_filesize]=100
         [empty_trash_days]=30 [publichtmlsubsonly]=0 [proxysubdomainsoverride]=0
         [display_cpanel_promotions]=0 [resetpass]=0 [resetpass_sub]=0
@@ -984,7 +1057,21 @@ EOF
     mkdir -pv /root/cpanel3-skel/.cpanel/nvdata 2>/dev/null || true
     echo "1" > /root/cpanel3-skel/.cpanel/nvdata/xmainwelcomedismissed
 
-    # BG Process Killer
+    # BG Process Killer (file-based — more reliable than whmapi1 alone)
+    log_info "Configuring Background Process Killer..."
+    [ -f /var/cpanel/killproc.conf ] && cp /var/cpanel/killproc.conf /var/cpanel/killproc.conf.beforetweak 2>/dev/null || true
+    cat > /var/cpanel/killproc.conf << 'KILLEOF'
+services
+ptlink
+psyBNC
+ircd
+guardservices
+generic-sniffers
+eggdrop
+bnc
+BitchX
+KILLEOF
+    # Also set via whmapi1 as backup
     whmapi1 configurebackgroundprocesskiller \
         processes_to_kill=BitchX processes_to_kill=bnc processes_to_kill=eggdrop \
         processes_to_kill=generic-sniffers processes_to_kill=guardservices \
@@ -1000,10 +1087,33 @@ EOF
     # Accept EULA
     whmapi1 accept_eula 2>/dev/null || true
 
+    # ── Disable Compiler Access ──
+    log_info "Disabling compiler access..."
+    # Method 1: cPanel script (most reliable across all OS)
+    /scripts/compilers off 2>/dev/null || true
+    # Method 2: whmapi1
+    whmapi1 set_tweaksetting key=use_compiler_group value=1 2>/dev/null || true
+    # Method 3: Direct file permissions (fallback)
+    for COMP in /usr/bin/gcc /usr/bin/g++ /usr/bin/cc /usr/bin/c++ /usr/bin/cpp \
+                /usr/bin/make /usr/bin/as /usr/bin/ld; do
+        if [ -f "$COMP" ]; then
+            chmod 750 "$COMP" 2>/dev/null || true
+            chown root:compiler "$COMP" 2>/dev/null || true
+        fi
+    done
+
+    # ── Shell Fork Bomb Protection ──
+    log_info "Enabling Shell Fork Bomb Protection..."
+    /usr/local/cpanel/bin/install-login-profile --install limits 2>/dev/null || true
+
+    # ── SMTP Restrictions (disabled — CSF handles this) ──
+    whmapi1 set_tweaksetting key=smtpmailgidonly value=0 2>/dev/null || true
+
     # Fix cPanel RPMs
     /usr/local/cpanel/scripts/check_cpanel_pkgs --fix 2>/dev/null || true
 
     /usr/local/cpanel/whostmgr/bin/whostmgr2 --updatetweaksettings 2>/dev/null || true
+    /usr/local/cpanel/etc/init/startcpsrvd 2>/dev/null || true
     /usr/local/cpanel/scripts/restartsrv_cpsrvd 2>/dev/null || true
 
     log_ok "WHM Tweak Settings & Config complete"

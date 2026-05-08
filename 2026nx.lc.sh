@@ -4,7 +4,6 @@
 # Version: 2.0.0
 # All messages in English
 # SSH Port: 1337
-#
 # Supported OS:
 #   Ubuntu 20.04/22.04/24.04 LTS
 #   CentOS 7, CentOS Stream 8/9

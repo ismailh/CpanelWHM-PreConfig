@@ -35,6 +35,16 @@ CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 mkdir -p /var/log
 touch "$LOGFILE"
 
+# Plugin Install Status Tracking
+PL_CMQ="Pending"
+PL_DNS="Pending"
+PL_SOFT="Pending"
+PL_WPT="Pending"
+PL_JB5="Pending"
+PL_IMU="Pending"
+PL_LS="Pending"
+PL_CL="Pending"
+
 log_info()    { echo -e "${GREEN}[INFO]${NC}  $1"    | tee -a "$LOGFILE"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${NC}  $1"   | tee -a "$LOGFILE"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $1"      | tee -a "$LOGFILE"; }
@@ -565,34 +575,56 @@ EOF
 # cPANEL PLUGINS
 # ═══════════════════════════════════════════
 check_install_cmq() {
-    log_section "CMQ (ConfigServer MailQueues)"
-    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq.cgi ]; then
-        log_ok "CMQ already installed"; return 0; fi
-    if ! ask_yn "CMQ not found. Install?"; then log_warn "CMQ skipped"; return 0; fi
-    rm -rf /usr/src/cmq /usr/src/cmq.tgz 2>/dev/null || true
+    log_section "ConfigServer Mail Queues (CMQ)"
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ]; then
+        log_ok "CMQ already installed"; PL_CMQ="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "CMQ not found. Install?"; then log_warn "Skipped"; PL_CMQ="Skipped"; return 0; fi
 
-    # Try GitHub mirror first, then configserver.com
-    wget -q https://github.com/systechICTltd/ConfigServer-Scripts/raw/main/cmq.tgz -O /usr/src/cmq.tgz 2>/dev/null || \
-    wget -q https://download.configserver.com/cmq.tgz -O /usr/src/cmq.tgz 2>/dev/null || true
-
-    if [ -f /usr/src/cmq.tgz ] && [ -s /usr/src/cmq.tgz ]; then
-        tar -xzf /usr/src/cmq.tgz -C /usr/src
-        cd /usr/src/cmq && sh install.sh
-        cd /root && rm -rf /usr/src/cmq /usr/src/cmq.tgz
-        log_ok "CMQ installed"
-    else
-        log_error "CMQ download failed from all sources"
+    local CMQ_URLS=(
+        "https://raw.githubusercontent.com/systechICTltd/ConfigServer-Scripts/main/cmq.tgz"
+        "https://download.configserver.com/cmq.tgz"
+    )
+    local SUCCESS=0
+    for URL in "${CMQ_URLS[@]}"; do
+        log_info "Downloading CMQ from $URL..."
+        wget -q "$URL" -O /usr/src/cmq.tgz
+        if [ $? -eq 0 ] && [ -s /usr/src/cmq.tgz ]; then
+            cd /usr/src || continue
+            rm -rf cmq/
+            tar -xzf cmq.tgz 2>/dev/null
+            if [ -d cmq ]; then
+                cd cmq
+                sh install.sh 2>/dev/null
+                rm -Rfv /usr/src/cmq* 2>/dev/null
+                log_ok "CMQ installed via $URL"
+                SUCCESS=1; PL_CMQ="Installed"; break
+            fi
+        fi
+    done
+    if [ $SUCCESS -eq 0 ]; then
+        log_error "CMQ download/install failed."
+        PL_CMQ="Failed"
     fi
 }
 
-check_install_dns_check() {
+check_install_dnscheck() {
     log_section "Account DNS Check"
-    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ]; then
-        log_ok "Account DNS Check already installed"; return 0; fi
-    if ! ask_yn "Account DNS Check not found. Install?"; then log_warn "Skipped"; return 0; fi
-    cd /usr/src && wget -q http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
-    sh latest-accountdnscheck && cd /root
-    log_ok "Account DNS Check installed"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ]; then
+        log_ok "Account DNS Check already installed"; PL_DNS="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "Account DNS Check not found. Install?"; then log_warn "Skipped"; PL_DNS="Skipped"; return 0; fi
+    wget -q -O /usr/src/accountdnscheck.tgz https://files.ndchost.com/scripts/accountdnscheck/accountdnscheck.tgz
+    if [ -s /usr/src/accountdnscheck.tgz ]; then
+        cd /usr/src || return 1
+        tar -xzf accountdnscheck.tgz 2>/dev/null
+        cd accountdnscheck
+        sh install.sh 2>/dev/null
+        rm -Rfv /usr/src/accountdnscheck* 2>/dev/null
+        log_ok "Account DNS Check installed"
+        PL_DNS="Installed"
+    else
+        log_error "Account DNS Check install failed."
+        PL_DNS="Failed"
+    fi
 }
 
 check_install_softaculous() {
@@ -619,13 +651,15 @@ check_install_jetbackup() {
     log_section "JetBackup"
     if command -v jetbackup5 &>/dev/null || [ -d /usr/local/jetapps/var/lib/jetbackup5/Core/ ]; then
         log_ok "JetBackup 5 is already installed — skipping"
+        PL_JB5="Installed (Pre-existing)"
         return 0
     fi
     if command -v jetbackup &>/dev/null || [ -d /usr/local/jetapps/var/lib/JetBackup/Core/ ]; then
         log_warn "JetBackup 4 is already installed — skipping (EOL / No direct upgrade to JB5)"
+        PL_JB5="Skipped (JB4 detected)"
         return 0
     fi
-    if ! ask_yn "JetBackup not found. Install?"; then log_warn "Skipped"; return 0; fi
+    if ! ask_yn "JetBackup not found. Install?"; then log_warn "Skipped"; PL_JB5="Skipped"; return 0; fi
 
     echo "  [1] JetBackup 5 (Recommended / Stable)"
     echo "  [2] JetBackup 5 (Edge / Beta)"
@@ -641,8 +675,10 @@ check_install_jetbackup() {
             *) jetapps --install jetbackup5-cpanel stable 2>/dev/null || true ;;
         esac
         log_ok "JetBackup installed"
+        PL_JB5="Installed"
     else
         log_error "JetApps installer failed to initialize"
+        PL_JB5="Failed"
         return 1
     fi
 }
@@ -650,8 +686,8 @@ check_install_jetbackup() {
 check_install_imunify360() {
     log_section "Imunify360"
     if command -v imunify360-agent &>/dev/null; then
-        log_ok "Imunify360 already installed"; return 0; fi
-    if ! ask_yn "Imunify360 not found. Install?"; then log_warn "Skipped"; return 0; fi
+        log_ok "Imunify360 already installed"; PL_IMU="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "Imunify360 not found. Install?"; then log_warn "Skipped"; PL_IMU="Skipped"; return 0; fi
     echo "  [1] Imunify360 (Full — requires license)"
     echo "  [2] ImunifyAV+ (requires license)"
     echo "  [3] ImunifyAV Free"
@@ -664,17 +700,15 @@ check_install_imunify360() {
         *) bash /tmp/imu.sh --imunifyav ;;
     esac
     rm -f /tmp/imu.sh
-    log_ok "Imunify360 installed"
+    log_ok "Imunify installed"
+    PL_IMU="Installed"
 }
 
-# ═══════════════════════════════════════════
-# LITESPEED
-# ═══════════════════════════════════════════
 check_install_litespeed() {
     log_section "LiteSpeed Web Server"
     if [ -f /usr/local/lsws/bin/lshttpd ]; then
-        log_ok "LiteSpeed already installed"; return 0; fi
-    if ! ask_yn "LiteSpeed not found. Install?"; then log_warn "Skipped"; return 0; fi
+        log_ok "LiteSpeed already installed"; PL_LS="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "LiteSpeed not found. Install?"; then log_warn "Skipped"; PL_LS="Skipped"; return 0; fi
 
     echo "  [1] Trial License (15 days)"
     echo "  [2] Serial Number"
@@ -691,16 +725,13 @@ check_install_litespeed() {
     # Method 1: LiteSpeed repo + WHM plugin (works on all cPanel OS)
     log_info "Installing LiteSpeed via WHM plugin..."
     if echo "$OS" | grep -iq "centos" && [ "$OS_MAJOR" = "7" ]; then
-        # CentOS 7
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el7.noarch.rpm 2>/dev/null || true
         yum install -y lsws 2>/dev/null && LS_INSTALLED=1
     elif echo "$OS" | grep -iq "centos\|almalinux\|rocky\|cloudlinux"; then
-        # RHEL 8/9 family (includes CloudLinux 8/9)
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el8.noarch.rpm 2>/dev/null || \
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el9.noarch.rpm 2>/dev/null || true
         dnf install -y lsws 2>/dev/null && LS_INSTALLED=1
     elif echo "$OS" | grep -iq "ubuntu"; then
-        # Ubuntu 20/22/24
         wget -qO - https://rpms.litespeedtech.com/debian/lst_debian_repo.gpg | apt-key add - 2>/dev/null || true
         wget -qO - https://rpms.litespeedtech.com/debian/lst_repo.gpg | gpg --dearmor -o /usr/share/keyrings/lst-keyring.gpg 2>/dev/null || true
         CODENAME=$(lsb_release -sc 2>/dev/null || echo "focal")
@@ -709,7 +740,6 @@ check_install_litespeed() {
         apt-get update -y 2>/dev/null || true
         apt-get install -y lsws 2>/dev/null && LS_INSTALLED=1
     elif echo "$OS" | grep -iq "debian"; then
-        # Debian 11/12
         wget -qO - https://rpms.litespeedtech.com/debian/lst_repo.gpg | gpg --dearmor -o /usr/share/keyrings/lst-keyring.gpg 2>/dev/null || true
         CODENAME=$(lsb_release -sc 2>/dev/null || echo "bullseye")
         echo "deb [signed-by=/usr/share/keyrings/lst-keyring.gpg] http://rpms.litespeedtech.com/debian/ $CODENAME main" \
@@ -718,18 +748,40 @@ check_install_litespeed() {
         apt-get install -y lsws 2>/dev/null && LS_INSTALLED=1
     fi
 
-    # Method 2: Fallback to get.litespeed.sh script
+    # Method 2: Fallback to silent get.litespeed.sh via /root/lsws.options
     if [ "$LS_INSTALLED" -eq 0 ]; then
-        log_warn "Repo install failed — trying WHM autoinstaller fallback..."
-        # On cPanel, this script strictly requires 10 parameters:
-        # SERIAL_NO PHP_SUEXEC port_offset admin_user admin_pass admin_email EA_Integration auto_switch deploy_lscwp plugin_autoinstall
+        log_warn "Repo install failed — trying get.litespeed.sh script..."
         ADMIN_PASS=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 12 || echo "Admin123$RANDOM")
-        bash <(curl -LSs https://get.litespeed.sh) "$LS_SERIAL" 2 0 admin "$ADMIN_PASS" root@localhost 1 1 0 1 2>/dev/null && LS_INSTALLED=1
+        cat > /root/lsws.options << EOF
+serial_no="${LS_SERIAL}"
+php_suexec="2"
+port_offset="0"
+admin_user="admin"
+admin_pass="${ADMIN_PASS}"
+admin_email="root@localhost"
+easyapache_integration="1"
+auto_switch_to_lsws="1"
+deploy_lscwp="0"
+EOF
+        touch /root/lsws-install.sh
+        wget -q https://get.litespeed.sh -O /root/lsws-install.sh 2>/dev/null || true
+        bash /root/lsws-install.sh "$LS_SERIAL" 2>/dev/null && LS_INSTALLED=1
+        
+        # Additional cleanup / compilation from fallback snippet
+        wget -q https://litespeedtech.com/packages/cpanel/buildtimezone_ea4.tar.gz -O /root/buildtimezone_ea4.tar.gz 2>/dev/null || true
+        tar -xzvf /root/buildtimezone_ea4.tar.gz 2>/dev/null || true
+        chmod a+x /root/buildtimezone*.sh 2>/dev/null && /root/buildtimezone_ea4.sh y 2>/dev/null || true
+        yum-complete-transaction --cleanup-only 2>/dev/null || true
+        yum install ea-php*-php-devel -y --skip-broken 2>/dev/null || true
+        yum remove ea-apache24-mod_ruid2 -y 2>/dev/null || true
+        
+        rm -f /root/buildtimezone* /root/lsws* 2>/dev/null || true
     fi
 
     if [ "$LS_INSTALLED" -eq 0 ]; then
         log_error "LiteSpeed install failed on $OS $VER"
         log_error "  Try manually: https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:cpanel:whm-plugin-install"
+        PL_LS="Failed"
         return 1
     fi
 
@@ -738,8 +790,11 @@ check_install_litespeed() {
         /usr/local/lsws/bin/lshttpd -r "$LS_SERIAL" 2>/dev/null || true
     fi
 
-    # Install LSCache Manager plugin for WHM
-    /usr/local/lsws/admin/misc/lscmctl install 2>/dev/null || true
+    # Install LSCache Manager plugin for WHM and config
+    /usr/local/lsws/admin/misc/lscmctl cpanelplugin --install 2>/dev/null || true
+    /usr/local/lsws/admin/misc/lscmctl setcacheroot 2>/dev/null || true
+    /usr/local/lsws/admin/misc/lscmctl scan 2>/dev/null || true
+    /usr/local/lsws/admin/misc/lscmctl enable -m 2>/dev/null || true
 
     # Enable and start
     systemctl enable lsws 2>/dev/null || true
@@ -759,6 +814,7 @@ check_install_litespeed() {
     fi
 
     log_ok "LiteSpeed installed on $OS $VER"
+    PL_LS="Installed"
 }
 
 # ═══════════════════════════════════════════
@@ -767,10 +823,10 @@ check_install_litespeed() {
 check_install_cloudlinux() {
     log_section "CloudLinux"
     if echo "$OS" | grep -iq "ubuntu\|debian"; then
-        log_warn "CloudLinux not supported on Ubuntu/Debian — skipping"; return 0; fi
+        log_warn "CloudLinux not supported on Ubuntu/Debian — skipping"; PL_CL="Skipped (OS unsupported)"; return 0; fi
     if grep -qi "cloudlinux" /etc/os-release 2>/dev/null; then
-        log_ok "CloudLinux already installed"; return 0; fi
-    if ! ask_yn "CloudLinux not found. Install?"; then log_warn "Skipped"; return 0; fi
+        log_ok "CloudLinux already installed"; PL_CL="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "CloudLinux not found. Install?"; then log_warn "Skipped"; PL_CL="Skipped"; return 0; fi
     read -rp "  License Key (Enter for IP activation): " CL_KEY </dev/tty
     wget -q https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /tmp/cldeploy
     chmod +x /tmp/cldeploy
@@ -782,6 +838,7 @@ check_install_cloudlinux() {
     rm -f /tmp/cldeploy
     log_warn "Reboot required after CloudLinux install"
     log_ok "CloudLinux installed"
+    PL_CL="Installed"
 }
 
 
@@ -1141,6 +1198,17 @@ print_summary() {
     printf "  ║  %-12s : %-33s║\n" "SSH Port"  "$SSH_PORT"
     printf "  ║  %-12s : %-33s║\n" "Public IP" "$PUBLIC_IP"
     printf "  ║  %-12s : %-33s║\n" "Log"       "$LOGFILE"
+    echo "  ╠══════════════════════════════════════════════════╣"
+    echo "  ║  PLUGINS SUMMARY                                 ║"
+    echo "  ╠══════════════════════════════════════════════════╣"
+    printf "  ║  %-12s : %-33s║\n" "LiteSpeed"  "${PL_LS}"
+    printf "  ║  %-12s : %-33s║\n" "Imunify360" "${PL_IMU}"
+    printf "  ║  %-12s : %-33s║\n" "JetBackup"  "${PL_JB5}"
+    printf "  ║  %-12s : %-33s║\n" "Softaculous" "${PL_SOFT}"
+    printf "  ║  %-12s : %-33s║\n" "WP Toolkit" "${PL_WPT}"
+    printf "  ║  %-12s : %-33s║\n" "CMQ"        "${PL_CMQ}"
+    printf "  ║  %-12s : %-33s║\n" "DNS Check"  "${PL_DNS}"
+    printf "  ║  %-12s : %-33s║\n" "CloudLinux" "${PL_CL}"
     echo "  ╚══════════════════════════════════════════════════╝"
     echo -e "${NC}"
     if ask_yn "Reboot now?"; then

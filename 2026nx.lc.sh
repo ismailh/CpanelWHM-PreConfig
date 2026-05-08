@@ -618,25 +618,33 @@ check_install_wptoolkit() {
 check_install_jetbackup() {
     log_section "JetBackup"
     if command -v jetbackup5 &>/dev/null || [ -d /usr/local/jetapps/var/lib/jetbackup5/Core/ ]; then
-        log_ok "JetBackup 5 already installed"; return 0; fi
-    if [ -d /usr/local/jetapps/var/lib/JetBackup/Core/ ]; then
-        log_warn "JetBackup 4 detected (EOL)"; return 0; fi
-    if ! ask_yn "JetBackup not found. Install?"; then log_warn "Skipped"; return 0; fi
-    echo "  [1] JetBackup 5 (Recommended)"
-    echo "  [2] JetBackup 4 (Legacy/EOL)"
-    read -rp "  Select [1/2]: " JB_V </dev/tty
-    if echo "$OS" | grep -iq "ubuntu\|debian"; then
-        bash <(curl -LSs https://repo.jetlicense.com/static/install) 2>/dev/null || true
-        apt-get install -y jetbackup5-cpanel 2>/dev/null || true
-    else
-        bash <(curl -LSs https://repo.jetlicense.com/static/install) 2>/dev/null || true
-        local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
-        case "$JB_V" in
-            2) $PKG install -y jetbackup-cpanel 2>/dev/null || true ;;
-            *) $PKG install -y jetbackup5-cpanel 2>/dev/null || true ;;
-        esac
+        log_ok "JetBackup 5 is already installed — skipping"
+        return 0
     fi
-    log_ok "JetBackup installed"
+    if command -v jetbackup &>/dev/null || [ -d /usr/local/jetapps/var/lib/JetBackup/Core/ ]; then
+        log_warn "JetBackup 4 is already installed — skipping (EOL / No direct upgrade to JB5)"
+        return 0
+    fi
+    if ! ask_yn "JetBackup not found. Install?"; then log_warn "Skipped"; return 0; fi
+
+    echo "  [1] JetBackup 5 (Recommended / Stable)"
+    echo "  [2] JetBackup 5 (Edge / Beta)"
+    read -rp "  Select [1/2] (default 1): " JB_V </dev/tty
+
+    # Install JetApps Repo Manager
+    log_info "Installing JetApps repository manager..."
+    bash <(curl -LSs https://repo.jetlicense.com/static/install) 2>/dev/null || true
+
+    if command -v jetapps &>/dev/null; then
+        case "$JB_V" in
+            2) jetapps --install jetbackup5-cpanel edge 2>/dev/null || true ;;
+            *) jetapps --install jetbackup5-cpanel stable 2>/dev/null || true ;;
+        esac
+        log_ok "JetBackup installed"
+    else
+        log_error "JetApps installer failed to initialize"
+        return 1
+    fi
 }
 
 check_install_imunify360() {
@@ -686,8 +694,8 @@ check_install_litespeed() {
         # CentOS 7
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el7.noarch.rpm 2>/dev/null || true
         yum install -y lsws 2>/dev/null && LS_INSTALLED=1
-    elif echo "$OS" | grep -iq "centos\|almalinux\|rocky"; then
-        # RHEL 8/9 family
+    elif echo "$OS" | grep -iq "centos\|almalinux\|rocky\|cloudlinux"; then
+        # RHEL 8/9 family (includes CloudLinux 8/9)
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el8.noarch.rpm 2>/dev/null || \
         rpm -Uvh http://rpms.litespeedtech.com/centos/litespeed-repo-1.3-1.el9.noarch.rpm 2>/dev/null || true
         dnf install -y lsws 2>/dev/null && LS_INSTALLED=1

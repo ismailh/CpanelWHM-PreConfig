@@ -718,16 +718,13 @@ check_install_litespeed() {
         apt-get install -y lsws 2>/dev/null && LS_INSTALLED=1
     fi
 
-    # Method 2: Fallback to WHM autoinstaller script
+    # Method 2: Fallback to get.litespeed.sh script
     if [ "$LS_INSTALLED" -eq 0 ]; then
-        log_warn "Repo install failed — trying WHM autoinstaller..."
-        wget -q https://www.litespeedtech.com/packages/cpanel/lsws_whm_autoinstaller.sh -O /tmp/lsws.sh 2>/dev/null || \
-        curl -sSL https://www.litespeedtech.com/packages/cpanel/lsws_whm_autoinstaller.sh -o /tmp/lsws.sh 2>/dev/null || true
-        if [ -f /tmp/lsws.sh ] && [ -s /tmp/lsws.sh ]; then
-            chmod +x /tmp/lsws.sh
-            echo "$LS_SERIAL" | bash /tmp/lsws.sh 2>/dev/null && LS_INSTALLED=1
-            rm -f /tmp/lsws.sh
-        fi
+        log_warn "Repo install failed — trying WHM autoinstaller fallback..."
+        # On cPanel, this script strictly requires 10 parameters:
+        # SERIAL_NO PHP_SUEXEC port_offset admin_user admin_pass admin_email EA_Integration auto_switch deploy_lscwp plugin_autoinstall
+        ADMIN_PASS=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 12 || echo "Admin123$RANDOM")
+        bash <(curl -LSs https://get.litespeed.sh) "$LS_SERIAL" 2 0 admin "$ADMIN_PASS" root@localhost 1 1 0 1 2>/dev/null && LS_INSTALLED=1
     fi
 
     if [ "$LS_INSTALLED" -eq 0 ]; then

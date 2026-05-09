@@ -40,7 +40,7 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/head
 ## 🔌 Included Software & Plugins
 During the setup, the script intelligently asks if you'd like to install the following tools, fully configuring them to work together without conflicts:
 
-- **LiteSpeed Web Server** *(Trial, Custom Serial, or OpenLiteSpeed Free)*
+- **LiteSpeed Web Server** *(Trial or Custom Serial)*
 - **CloudLinux OS** *(License Activation Supported)*
 - **JetBackup 5** *(Stable/Edge branch selection)*
 - **Imunify360** *(Full, ImunifyAV+, or Free)*

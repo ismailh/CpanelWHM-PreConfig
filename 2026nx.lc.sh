@@ -517,10 +517,14 @@ _configure_csf() {
         sed -i "s/^${D}.*/${D} = \"${CURR},${PASSV_PORT}\"/" "$CSF"
     done
 
-    # cPanel migration ports
-    CURR_OUT=$(grep "^TCP_OUT" "$CSF" | cut -d'=' -f2 | sed 's/ //g;s/"//g')
-    echo "$CURR_OUT" | grep -q "2082,2083" || \
-        sed -i "s/^TCP_OUT.*/TCP_OUT = \"${CURR_OUT},2082,2083\"/" "$CSF"
+    # Whitelist all cPanel/WHM/Webmail ports explicitly to avoid "not responding" issues
+    for D in TCP_IN TCP_OUT TCP6_IN TCP6_OUT; do
+        CURR=$(grep "^${D}" "$CSF" | cut -d'=' -f2 | sed 's/ //g;s/"//g')
+        for P in 2082 2083 2086 2087 2095 2096; do
+            echo "$CURR" | grep -q "$P" || CURR="${CURR},${P}"
+        done
+        sed -i "s/^${D}.*/${D} = \"${CURR}\"/" "$CSF"
+    done
 
     # Blocklists
     for bl in SPAMDROP SPAMEDROP DSHIELD HONEYPOT; do
@@ -585,7 +589,6 @@ check_install_cmq() {
 
     local CMQ_URLS=(
         "https://raw.githubusercontent.com/systechICTltd/ConfigServer-Scripts/main/cmq.tgz"
-        "https://download.configserver.com/cmq.tgz"
     )
     local SUCCESS=0
     for URL in "${CMQ_URLS[@]}"; do
@@ -872,11 +875,30 @@ check_install_redis_memcached() {
 # ═══════════════════════════════════════════
 setup_telegram_alerts() {
     log_section "Capnel Security Alerts To Telegram"
-    if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHATID" ]; then
-        log_warn "Skipped (No credentials)"
+    if [ -f /root/.telegram_installed ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
+        log_ok "cPanel Security Alerts To Telegram already configured."
+        PL_TG="Installed (Pre-existing)"
+        return 0
+    fi
+
+    if ! ask_yn "Enable cPanel Security Alerts To Telegram?"; then 
+        log_warn "Skipped Telegram integration."
         PL_TG="Skipped"
         return 0
     fi
+
+    echo -ne "  ${CYAN}➔ Enter Telegram Bot Token:${NC} " >/dev/tty
+    read -r TG_TOKEN </dev/tty
+    echo -ne "  ${CYAN}➔ Enter Telegram Chat ID:${NC} " >/dev/tty
+    read -r TG_CHATID </dev/tty
+
+    if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHATID" ]; then
+        log_error "Skipped (No credentials provided)"
+        PL_TG="Failed"
+        return 0
+    fi
+
+    echo -e "  ${GREEN}[OK] Telegram alerts will be configured.${NC}\n"
 
     log_info "Creating Telegram Alert Wrapper..."
     # 1. Create a global Bash script
@@ -1507,26 +1529,6 @@ main() {
         echo -e "${GREEN}${BOLD}  ── This script has run before on your server. Now configuring next steps... ──${NC}\n"
         echo -ne "  ${YELLOW}Press ENTER to continue...${NC} " >/dev/tty
         read -r </dev/tty
-        
-        if [ -f /root/.telegram_installed ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
-            log_ok "cPanel Security Alerts To Telegram already configured."
-            TG_YESNO="n"
-        else
-            echo -ne "  ${YELLOW}[Optional]${NC} Enable cPanel Security Alerts To Telegram? (y/n): " >/dev/tty
-            read -r TG_YESNO </dev/tty
-            if [ "$TG_YESNO" = "y" ] || [ "$TG_YESNO" = "Y" ]; then
-                echo -ne "  ${CYAN}➔ Enter Telegram Bot Token:${NC} " >/dev/tty
-                read -r TG_TOKEN </dev/tty
-                echo -ne "  ${CYAN}➔ Enter Telegram Chat ID:${NC} " >/dev/tty
-                read -r TG_CHATID </dev/tty
-                echo -e "  ${GREEN}[OK] Telegram alerts will be configured.${NC}\n"
-            else
-                echo -e "  ${YELLOW}➔ Skipped Telegram integration.${NC}\n"
-            fi
-        fi
-        
-        export TG_TOKEN
-        export TG_CHATID
         
         second_run
     fi

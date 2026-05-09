@@ -827,7 +827,7 @@ check_install_cleanbackups() {
 
 check_install_watchmysql() {
     log_section "WatchMySQL"
-    if command -v watchmysql &>/dev/null || [ -d /var/cpanel/addons/watchmysql ] || [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ] || [ -d /var/cpanel/watchmysql ] || [ -n "$(find /usr/local/cpanel/whostmgr/docroot/cgi/ -maxdepth 1 -name '*watchmysql*' -print -quit 2>/dev/null)" ]; then
+    if [ -f /etc/watchmysql.config ] || [ -f /usr/sbin/watchmysql ] || [ -d /var/cpanel/addons/watchmysql ] || [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ] || [ -d /var/cpanel/watchmysql ]; then
         log_ok "WatchMySQL — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "WatchMySQL already configured. What would you like to do?" 30
         local choice=$?

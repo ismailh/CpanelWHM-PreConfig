@@ -34,7 +34,13 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/head
 
 ---
 
-## 📦 Supported Operating Systems (64-bit)
+## 📦 Supported Environments & Operating Systems
+
+**Hardware Support:**
+- Fully supports **VPS (Virtual Private Servers)**
+- Fully supports **Dedicated Servers / Bare Metal**
+
+**Operating Systems (64-bit):**
 - Ubuntu 20.04 LTS / 22.04 LTS / 24.04 LTS
 - Debian 11 / 12
 - AlmaLinux 8.x / 9.x

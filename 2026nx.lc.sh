@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-# WHM/cPanel Pre-Configuration Script
-# Version: 2.0.0
+# WHM/cPanel all Improtent Plugin Installation Setup Script and Softaculous
+# Version: 3.0.0
 # All messages in English
 # SSH Port: 1337
 #
@@ -1182,6 +1182,66 @@ KILLEOF
 }
 
 # ═══════════════════════════════════════════
+# LICENSE CHECK
+# ═══════════════════════════════════════════
+check_licenses() {
+    log_section "License Status Check"
+    
+    # cPanel
+    log_info "Checking cPanel license..."
+    LIC_CP="Not Installed"
+    if [ -f /usr/local/cpanel/cpkeyclt ]; then
+        if /usr/local/cpanel/cpkeyclt 2>&1 | grep -iq "succeeded"; then
+            LIC_CP="Active"
+        else
+            LIC_CP="Invalid / Expired"
+        fi
+    fi
+
+    # LiteSpeed
+    log_info "Checking LiteSpeed license..."
+    LIC_LS="Not Installed"
+    if [ -f /usr/local/lsws/bin/lshttpd ]; then
+        LIC_LS=$(/usr/local/lsws/bin/lshttpd -V 2>/dev/null | grep -i "License" | awk -F':' '{print $2}' | xargs)
+        [ -z "$LIC_LS" ] && LIC_LS="Unknown"
+    fi
+
+    # CloudLinux
+    log_info "Checking CloudLinux license..."
+    LIC_CL="Not Installed"
+    if command -v cldetect >/dev/null 2>&1; then
+        if cldetect --check-license 2>&1 | grep -iq "ok"; then
+            LIC_CL="Active"
+        else
+            LIC_CL="Invalid / Error"
+        fi
+    fi
+
+    # JetBackup 5
+    log_info "Checking JetBackup 5 license..."
+    LIC_JB5="Not Installed"
+    if command -v jetbackup5 >/dev/null 2>&1; then
+        local JB_OUT
+        JB_OUT=$(jetbackup5 --license 2>&1)
+        if echo "$JB_OUT" | grep -iq "Valid"; then
+            LIC_JB5="Active"
+        elif echo "$JB_OUT" | grep -iq "Expired"; then
+            LIC_JB5="Expired"
+        else
+            LIC_JB5="Invalid / Error"
+        fi
+    fi
+
+    # Softaculous
+    log_info "Checking Softaculous license..."
+    LIC_SOFT="Not Installed"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/softaculous/cli.php ]; then
+        LIC_SOFT=$(php /usr/local/cpanel/whostmgr/docroot/cgi/softaculous/cli.php -l 2>/dev/null | grep -i "License Type" | awk -F':' '{print $2}' | xargs)
+        [ -z "$LIC_SOFT" ] && LIC_SOFT="Unknown"
+    fi
+}
+
+# ═══════════════════════════════════════════
 # SUMMARY
 # ═══════════════════════════════════════════
 print_summary() {
@@ -1209,6 +1269,14 @@ print_summary() {
     printf "  ║  %-12s : %-33s║\n" "CMQ"        "${PL_CMQ}"
     printf "  ║  %-12s : %-33s║\n" "DNS Check"  "${PL_DNS}"
     printf "  ║  %-12s : %-33s║\n" "CloudLinux" "${PL_CL}"
+    echo "  ╠══════════════════════════════════════════════════╣"
+    echo "  ║  LICENSE STATUS                                  ║"
+    echo "  ╠══════════════════════════════════════════════════╣"
+    [ "$LIC_CP" != "Not Installed" ]   && printf "  ║  %-12s : %-33s║\n" "cPanel"      "${LIC_CP}"
+    [ "$LIC_LS" != "Not Installed" ]   && printf "  ║  %-12s : %-33s║\n" "LiteSpeed"   "${LIC_LS}"
+    [ "$LIC_CL" != "Not Installed" ]   && printf "  ║  %-12s : %-33s║\n" "CloudLinux"  "${LIC_CL}"
+    [ "$LIC_JB5" != "Not Installed" ]  && printf "  ║  %-12s : %-33s║\n" "JetBackup 5" "${LIC_JB5}"
+    [ "$LIC_SOFT" != "Not Installed" ] && printf "  ║  %-12s : %-33s║\n" "Softaculous" "${LIC_SOFT}"
     echo "  ╚══════════════════════════════════════════════════╝"
     echo -e "${NC}"
     if ask_yn "Reboot now?"; then
@@ -1249,6 +1317,7 @@ second_run() {
     install_ea4_php
     # Final CSF reconfiguration (pick up LiteSpeed/Imunify ports)
     _configure_csf
+    check_licenses
     print_summary
 }
 

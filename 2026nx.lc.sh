@@ -1984,7 +1984,7 @@ print_summary() {
     CPANEL_VER=$(/usr/local/cpanel/cpanel -V 2>/dev/null | awk '{print $1}' || echo "N/A")
     echo -e "${GREEN}${BOLD}"
     echo "  ╔══════════════════════════════════════════════════╗"
-    echo "  ║  WHM/cPanel PreConfig v3.0 - All-in-One Deployment"
+    echo "  ║ WHM/cPanel PreConfig v3.0 - All-in-One Deployment"
     echo "  ╠══════════════════════════════════════════════════╣"
     printf "  ║  %-12s : %-33s║\n" "Date"        "$(date '+%Y-%m-%d %H:%M UTC')"
     printf "  ║  %-12s : %-33s║\n" "Server Type" "${SERVER_TYPE:0:33}"

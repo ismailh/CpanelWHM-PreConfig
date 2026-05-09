@@ -922,6 +922,7 @@ EOF
     /usr/local/bin/telegram-alert "✅ WHM/cPanel Deployment v3.0 Successfully Completed on IP: $PUBLIC_IP"
     
     log_ok "Telegram Security Alerts Configured!"
+    touch /root/.telegram_installed
     PL_TG="Installed"
 }
 
@@ -1507,7 +1508,7 @@ main() {
         echo -ne "  ${YELLOW}Press ENTER to continue...${NC} " >/dev/tty
         read -r </dev/tty
         
-        if [ -f /etc/csf/csfpost.sh ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
+        if [ -f /root/.telegram_installed ] || [ -f /usr/local/bin/telegram-alert ]; then
             log_ok "cPanel Security Alerts To Telegram already configured."
             TG_YESNO="n"
         else

@@ -94,12 +94,13 @@ ask_yn_timeout() {
 ask_reconfig_uninstall_timeout() {
     local q="$1"
     local timeout="$2"
-    echo -ne "\n${YELLOW}[?]${NC} ${BOLD}${q}${NC}\n  (y = reconfig / reinstall, n = skip, type 'need uninstall' to remove. Skips in ${timeout}s): "
+    local uninst_word="${3:-need uninstall}"
+    echo -ne "\n${YELLOW}[?]${NC} ${BOLD}${q}${NC}\n  (y = reconfig / reinstall, n = skip, type '${uninst_word}' to remove. Skips in ${timeout}s): "
     local a
     if read -t "$timeout" -r a </dev/tty; then
         case "${a,,}" in
             y|yes) return 0 ;;
-            "need unistall"|"need uninstall") return 2 ;;
+            "${uninst_word,,}"|"need unistall"|"need uninstall") return 2 ;;
             *) return 1 ;;
         esac
     else
@@ -400,7 +401,26 @@ install_cpanel() {
 _install_csf() {
     log_section "CSF Firewall — Install"
     if [ -d /etc/csf ]; then
-        log_ok "CSF already installed — skipping install"
+        log_ok "CSF Firewall — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "CSF already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped CSF configuration"
+            CSF_RECONFIG_CHOICE="skip"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CSF..."
+            cd /etc/csf && sh uninstall.sh 2>/dev/null || true
+            rm -rf /etc/csf
+            log_ok "CSF Uninstalled"
+            CSF_RECONFIG_CHOICE="uninstalled"
+            return 0
+        else
+            CSF_RECONFIG_CHOICE="reconfig"
+        fi
+    elif ! ask_yn "Install CSF Firewall?"; then
+        log_warn "Skipped CSF Firewall integration."
+        CSF_RECONFIG_CHOICE="skip"
         return 0
     fi
 
@@ -470,11 +490,11 @@ _install_csf() {
         dnf install -y cpanel-csf 2>/dev/null && CSF_INSTALLED=1
     fi
 
-    # Fallback 1: manual download from configserver.com
+    # Fallback 1: manual download from alternate github release
     if [ "$CSF_INSTALLED" -eq 0 ]; then
-        log_warn "cpanel-csf package not available — trying configserver.com..."
+        log_warn "cpanel-csf package not available — trying github release..."
         cd /usr/src
-        wget -q https://download.configserver.com/csf.tgz -O /usr/src/csf.tgz 2>/dev/null
+        wget -q https://github.com/Black-HOST/csf/releases/latest/download/csf.tgz -O /usr/src/csf.tgz 2>/dev/null
         if [ -f /usr/src/csf.tgz ] && [ -s /usr/src/csf.tgz ]; then
             tar -xzf /usr/src/csf.tgz -C /usr/src && cd /usr/src/csf && sh install.sh
             cd /root && rm -rf /usr/src/csf /usr/src/csf.tgz
@@ -522,24 +542,7 @@ _configure_csf() {
 
     local CSF="/etc/csf/csf.conf"
 
-    if grep -q "$SSH_PORT" "$CSF" 2>/dev/null && [ -z "$CSF_RECONFIG_CHOICE" ]; then
-        log_ok "CSF Firewall — Configure / Installed Before"
-        ask_reconfig_uninstall_timeout "CSF Firewall already configured. What would you like to do?" 30
-        local choice=$?
-        if [ $choice -eq 1 ]; then
-            log_warn "Skipped CSF Firewall configuration"
-            CSF_RECONFIG_CHOICE="skip"
-            return 0
-        elif [ $choice -eq 2 ]; then
-            log_info "Uninstalling CSF Firewall..."
-            cd /etc/csf && sh uninstall.sh 2>/dev/null
-            log_ok "CSF Uninstalled"
-            CSF_RECONFIG_CHOICE="uninstalled"
-            return 0
-        else
-            CSF_RECONFIG_CHOICE="reconfig"
-        fi
-    elif [ "$CSF_RECONFIG_CHOICE" = "skip" ] || [ "$CSF_RECONFIG_CHOICE" = "uninstalled" ]; then
+    if [ "$CSF_RECONFIG_CHOICE" = "skip" ] || [ "$CSF_RECONFIG_CHOICE" = "uninstalled" ]; then
         log_warn "Skipped CSF Firewall configuration"
         return 0
     fi
@@ -1437,7 +1440,7 @@ check_install_cloudlinux() {
         log_warn "CloudLinux not supported on Ubuntu/Debian — skipping"; PL_CL="Skipped (OS unsupported)"; return 0; fi
     if grep -qi "cloudlinux" /etc/os-release 2>/dev/null; then
         log_ok "CloudLinux — Configure / Installed Before"
-        ask_reconfig_uninstall_timeout "CloudLinux already configured. What would you like to do?" 30
+        ask_reconfig_uninstall_timeout "CloudLinux already configured. What would you like to do?" 15
         local choice=$?
         if [ $choice -eq 1 ]; then
             log_warn "Skipped CloudLinux configuration"
@@ -1478,7 +1481,7 @@ check_install_cagefs() {
     log_section "CloudLinux CageFS"
     if command -v cagefsctl &>/dev/null || [ -d /usr/share/cagefs-skeleton ] || [ -f /usr/sbin/cagefsctl ]; then
         log_ok "CloudLinux CageFS — Configure / Installed Before"
-        ask_reconfig_uninstall_timeout "CloudLinux CageFS already configured. What would you like to do?" 30
+        ask_reconfig_uninstall_timeout "CloudLinux CageFS already configured. What would you like to do?" 15
         local choice=$?
         if [ $choice -eq 1 ]; then
             log_warn "Skipped CloudLinux CageFS configuration"

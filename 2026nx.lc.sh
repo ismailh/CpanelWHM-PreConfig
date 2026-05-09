@@ -615,7 +615,7 @@ check_install_cmq() {
 
 check_install_cmc() {
     log_section "ConfigServer ModSecurity Control (CMC)"
-    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cmc.cgi ]; then
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc.cgi ]; then
         log_ok "CMC already installed"; PL_CMC="Installed (Pre-existing)"; return 0; fi
     if ! ask_yn "Install ConfigServer ModSecurity Control (CMC)?"; then log_warn "Skipped"; PL_CMC="Skipped"; return 0; fi
 
@@ -628,7 +628,7 @@ check_install_cmc() {
     sh install.sh &>/dev/null
     rm -Rfv /usr/src/cmc* &>/dev/null
     
-    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cmc.cgi ]; then
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc.cgi ]; then
         log_ok "CMC installed successfully"
         PL_CMC="Installed"
     else

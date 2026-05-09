@@ -16,6 +16,13 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/head
 
 *Note: You will be prompted to enter a secret authorization phrase to execute the deployment.*
 
+### 🗑️ Uninstalling Plugins
+If you need to uninstall any of the plugins added by this script, you can run the standalone master uninstaller:
+
+```bash
+curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/heads/main/uninstall_plugins.sh | bash
+```
+
 ---
 
 ## 🔒 Base Hardening
@@ -49,6 +56,8 @@ During the setup, the script intelligently asks if you'd like to install the fol
 - **ConfigServer Mail Queues (CMQ)**
 - **ConfigServer ModSecurity Control (CMC)**
 - **Account DNS Check**
+- **CleanBackups**
+- **WatchMySQL**
 - **Redis & Memcached** *(Object Caching Daemons + EA4 PHP Extensions)*
 - **cPanel Security Alerts To Telegram** *(CSF & WHM Contact Manager Integration)*
 

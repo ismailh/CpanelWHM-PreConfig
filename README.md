@@ -47,7 +47,10 @@ During the setup, the script intelligently asks if you'd like to install the fol
 - **Softaculous**
 - **WP Toolkit**
 - **ConfigServer Mail Queues (CMQ)**
+- **ConfigServer ModSecurity Control (CMC)**
 - **Account DNS Check**
+- **Redis & Memcached** *(Object Caching Daemons + EA4 PHP Extensions)*
+- **cPanel Security Alerts To Telegram** *(CSF & WHM Contact Manager Integration)*
 
 ---
 

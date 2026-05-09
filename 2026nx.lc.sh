@@ -92,7 +92,7 @@ ask_yn_timeout() {
 ask_reconfig_uninstall_timeout() {
     local q="$1"
     local timeout="$2"
-    echo -ne "\n${YELLOW}[?]${NC} ${BOLD}${q}${NC}\n  (y = reconfigure, n = skip, type 'need unistall' to remove. Skips in ${timeout}s): "
+    echo -ne "\n${YELLOW}[?]${NC} ${BOLD}${q}${NC}\n  (y = reconfig / reinstall, n = skip, type 'need uninstall' to remove. Skips in ${timeout}s): "
     local a
     if read -t "$timeout" -r a </dev/tty; then
         case "${a,,}" in

@@ -1387,7 +1387,7 @@ main() {
         echo -e "  After reboot, run again for cPanel setup.\n"
         first_run
     else
-        echo -e "${GREEN}${BOLD}  ── SECOND RUN: cPanel + Plugins + PHP + Config ──${NC}\n"
+        echo -e "${GREEN}${BOLD}  ── This script has run before on your server. Now configuring next steps... ──${NC}\n"
         second_run
     fi
 

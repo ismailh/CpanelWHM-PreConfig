@@ -1,61 +1,86 @@
-# Cpanel & WHM-PreConfig
-Automated scripts to install and configure cPanel/WHM &amp; Litespeed and Cloudlinux etc.  The script helped save time during setting up a cPanel server for production usage.
+# Cpanel & WHM-PreConfig v3.0
 
-## How to run?
+Automated, robust, and highly secure deployment script to install and configure cPanel/WHM along with essential server plugins like LiteSpeed, CloudLinux, and JetBackup 5. Designed to save significant time and ensure standard security baselines when provisioning new cPanel production servers.
 
+> **Coded and developed by nx.lc & Bluedot Team**
+
+---
+
+## 🚀 How to run?
+
+Simply execute the following command as the `root` user on a fresh operating system:
+
+```bash
+curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/heads/main/2026nx.lc.sh | bash  
 ```
-curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/main/.conf.sh | bash
-```
 
-> SSH Port : 1337
-## Include Software?
-> CSF
+*Note: You will be prompted to enter a secret authorization phrase to execute the deployment.*
 
-> CMC 
+---
 
-> CMQ 
+## 🔒 Base Hardening
+- **Custom SSH Port:** `1337` (Root login allowed with Password Auth enabled)
+- **Firewall:** IPTables / Firewalld replaced natively with **CSF (ConfigServer Security & Firewall)**.
+- **Kernel Tuning:** Sysctl optimizations for network performance, swap reduced to 10.
+- **Compiler Access:** Completely restricted for security (`compilers off`).
+- **Protection:** Shell Fork Bomb Protection enabled by default.
 
-> Account DNS Check
+---
 
-> Imunify360 
+## 📦 Supported Operating Systems (64-bit)
+- Ubuntu 20.04 LTS / 22.04 LTS / 24.04 LTS
+- Debian 11 / 12
+- AlmaLinux 8.x / 9.x
+- Rocky Linux 8.x / 9.x
+- CentOS 7 / CentOS Stream 8 & 9
+- CloudLinux 8 / 9
 
-> Softaculous
+---
 
-> WP Toolkit
+## 🔌 Included Software & Plugins
+During the setup, the script intelligently asks if you'd like to install the following tools, fully configuring them to work together without conflicts:
 
-> jetbackup4 & 5
+- **LiteSpeed Web Server** *(Trial, Custom Serial, or OpenLiteSpeed Free)*
+- **CloudLinux OS** *(License Activation Supported)*
+- **JetBackup 5** *(Stable/Edge branch selection)*
+- **Imunify360** *(Full, ImunifyAV+, or Free)*
+- **Softaculous**
+- **WP Toolkit**
+- **ConfigServer Mail Queues (CMQ)**
+- **Account DNS Check**
 
-> LiteSpeed 
+---
 
-> CloudLinux 
+## ⚙️ Core Configurations
 
-> WHMReseller 
+### Database
+- **Default Installation:** MariaDB 11.4
 
-## Supported OS?
-> CentOS 6.x/7.x/8.x 64bit
+### LiteSpeed Auto-Installer Fallback
+If installed via the script fallback, the LiteSpeed WebAdmin is deployed with the following credentials:
+- **User:** `admin`
+- **Pass:** *(Randomly generated 12-character secure password)*
 
-> AlmaLinux 8.x/9.x 64bit
+### Hardened PHP Settings (EA-PHP 7.4 to 8.4)
+- **memory_limit:** `1024M`
+- **post_max_size:** `100M`
+- **upload_max_filesize:** `100M`
+- **max_execution_time:** `200`
+- **max_input_vars:** `3000`
+- **date.timezone:** `UTC`
+- **disable_functions:** Secured by disabling 28 high-risk functions (e.g., `exec`, `shell_exec`, `system`, `passthru`, `popen`, `proc_open`).
 
+### WHM Tweak Settings Applied
+- Background Process Killer enabled (BitchX, eggdrop, sniffers, etc.)
+- Exim optimized (50MB message size limit, outbound spam detection)
+- AutoSSL renewal & expiry notification spam disabled.
+- Proxy Subdomains disabled.
 
+---
 
+## 📞 Support
 
-### Database Default Install
-> MariaDB 10.6
-
-### Default LSWS password you can change.
-* user = admin
-* pass = webhost321
-
-### Standard PHP Settings
-* max_execution_time = 200
-* max_input_time = 200
-* max_input_vars = 3000
-* memory_limit = 248M
-* post_max_size = 100M
-* upload_max_filesize = 100M
-
-
-### Support
-
-Any issue please contact ismail@bluedot.ltd
-https://me.ismail.info/
+If you encounter any issues or need further customization, please contact:
+**Email:** ismail@bluedot.ltd  
+**Website:** [https://me.ismail.info/](https://me.ismail.info/)
+**Website:** [https://nx.lc/](https://nx.lc/)

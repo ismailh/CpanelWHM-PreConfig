@@ -89,6 +89,23 @@ ask_yn_timeout() {
     fi
 }
 
+ask_reconfig_uninstall_timeout() {
+    local q="$1"
+    local timeout="$2"
+    echo -ne "\n${YELLOW}[?]${NC} ${BOLD}${q}${NC}\n  (y = reconfigure, n = skip, type 'need unistall' to remove. Skips in ${timeout}s): "
+    local a
+    if read -t "$timeout" -r a </dev/tty; then
+        case "${a,,}" in
+            y|yes) return 0 ;;
+            "need unistall"|"need uninstall") return 2 ;;
+            *) return 1 ;;
+        esac
+    else
+        echo ""
+        return 1
+    fi
+}
+
 check_root() { [ "$EUID" -ne 0 ] && { log_error "Run as root!"; exit 1; }; }
 
 # ── OS DETECTION ──
@@ -112,6 +129,16 @@ detect_os() {
     OS_MAJOR="${VER%%.*}"
     log_info "Detected OS: $OS, Version: $VER"
     export OS VER OS_MAJOR
+
+    # Check hardware environment
+    if command -v systemd-detect-virt &>/dev/null; then
+        VIRT=$(systemd-detect-virt 2>/dev/null || echo "none")
+        if [ "$VIRT" = "none" ]; then
+            log_info "Detected Hardware: Bare Metal Server"
+        else
+            log_info "Detected Hardware: Virtualized Environment ($VIRT)"
+        fi
+    fi
 }
 
 # ── PKG MANAGER HELPER ──
@@ -220,7 +247,8 @@ run_rhel() {
         ca-certificates chrony iptables-services \
         bash-completion lsof htop nmap-ncat sysstat \
         crontabs cronie cronie-anacron openldap-compat \
-        oniguruma libsodium jq ipcalc glibc-all-langpacks 2>/dev/null || true
+        oniguruma libsodium jq ipcalc glibc-all-langpacks \
+        smartmontools mdadm pciutils usbutils lshw nvme-cli hdparm 2>/dev/null || true
 
     # SELinux disable
     setenforce 0 2>/dev/null || true
@@ -273,7 +301,8 @@ run_debian_ubuntu() {
         ca-certificates chrony iptables iptables-persistent \
         bash-completion lsof htop netcat-openbsd sysstat \
         unattended-upgrades apt-listchanges sendmail \
-        software-properties-common ntpdate jq 2>/dev/null || true
+        software-properties-common ntpdate jq \
+        smartmontools mdadm pciutils usbutils lshw nvme-cli hdparm 2>/dev/null || true
 
     # Disable ufw but do NOT disable networking
     ufw disable 2>/dev/null || true
@@ -489,14 +518,22 @@ _configure_csf() {
 
     if grep -q "$SSH_PORT" "$CSF" 2>/dev/null && [ -z "$CSF_RECONFIG_CHOICE" ]; then
         log_ok "CSF Firewall — Configure Before"
-        if ! ask_yn_timeout "CSF Firewall already configured. Do you want to reconfigure it?" 30; then
+        ask_reconfig_uninstall_timeout "CSF Firewall already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
             log_warn "Skipped CSF Firewall configuration"
             CSF_RECONFIG_CHOICE="skip"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CSF Firewall..."
+            cd /etc/csf && sh uninstall.sh 2>/dev/null
+            log_ok "CSF Uninstalled"
+            CSF_RECONFIG_CHOICE="uninstalled"
             return 0
         else
             CSF_RECONFIG_CHOICE="reconfig"
         fi
-    elif [ "$CSF_RECONFIG_CHOICE" = "skip" ]; then
+    elif [ "$CSF_RECONFIG_CHOICE" = "skip" ] || [ "$CSF_RECONFIG_CHOICE" = "uninstalled" ]; then
         log_warn "Skipped CSF Firewall configuration"
         return 0
     fi
@@ -617,8 +654,27 @@ EOF
 check_install_cmq() {
     log_section "ConfigServer Mail Queues (CMQ)"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ]; then
-        log_ok "CMQ already installed"; PL_CMQ="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "CMQ not found. Install?"; then log_warn "Skipped"; PL_CMQ="Skipped"; return 0; fi
+        log_ok "CMQ — Configure Before"
+        ask_reconfig_uninstall_timeout "CMQ already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped CMQ configuration"
+            PL_CMQ="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CMQ..."
+            cd /usr/src && wget -q https://raw.githubusercontent.com/systechICTltd/ConfigServer-Scripts/main/cmq.tgz -O cmq.tgz
+            tar -xzf cmq.tgz && cd cmq && sh uninstall.sh 2>/dev/null
+            rm -Rfv /usr/src/cmq* 2>/dev/null
+            log_ok "CMQ Uninstalled"
+            PL_CMQ="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "CMQ not found. Install?"; then 
+        log_warn "Skipped"
+        PL_CMQ="Skipped"
+        return 0
+    fi
 
     local CMQ_URLS=(
         "https://raw.githubusercontent.com/systechICTltd/ConfigServer-Scripts/main/cmq.tgz"
@@ -649,8 +705,27 @@ check_install_cmq() {
 check_install_cmc() {
     log_section "ConfigServer ModSecurity Control (CMC)"
     if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc.cgi ]; then
-        log_ok "CMC already installed"; PL_CMC="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "Install ConfigServer ModSecurity Control (CMC)?"; then log_warn "Skipped"; PL_CMC="Skipped"; return 0; fi
+        log_ok "CMC — Configure Before"
+        ask_reconfig_uninstall_timeout "CMC already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped CMC configuration"
+            PL_CMC="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CMC..."
+            cd /usr/src && wget -q https://raw.githubusercontent.com/systechICTltd/ConfigServer-Scripts/main/cmc.tgz -O cmc.tgz
+            tar -xzf cmc.tgz && cd cmc && sh uninstall.sh 2>/dev/null
+            rm -Rfv /usr/src/cmc* 2>/dev/null
+            log_ok "CMC Uninstalled"
+            PL_CMC="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install ConfigServer ModSecurity Control (CMC)?"; then 
+        log_warn "Skipped"
+        PL_CMC="Skipped"
+        return 0
+    fi
 
     log_info "Downloading and installing CMC..."
     cd /usr/src || return 1
@@ -673,8 +748,25 @@ check_install_cmc() {
 check_install_dnscheck() {
     log_section "Account DNS Check"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ]; then
-        log_ok "Account DNS Check already installed"; PL_DNS="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "Account DNS Check not found. Install?"; then log_warn "Skipped"; PL_DNS="Skipped"; return 0; fi
+        log_ok "Account DNS Check — Configure Before"
+        ask_reconfig_uninstall_timeout "Account DNS Check already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped Account DNS Check configuration"
+            PL_DNS="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling Account DNS Check..."
+            rm -rf /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi
+            log_ok "Account DNS Check Uninstalled"
+            PL_DNS="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Account DNS Check not found. Install?"; then 
+        log_warn "Skipped"
+        PL_DNS="Skipped"
+        return 0
+    fi
 
     log_info "Downloading and installing Account DNS Check..."
     cd /usr/src || return 1
@@ -695,9 +787,17 @@ check_install_cleanbackups() {
     log_section "CleanBackups"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi ]; then
         log_ok "CleanBackups — Configure Before"
-        if ! ask_yn_timeout "CleanBackups already configured. Do you want to reconfigure it?" 30; then
+        ask_reconfig_uninstall_timeout "CleanBackups already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
             log_warn "Skipped CleanBackups configuration"
             PL_CLN="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CleanBackups..."
+            rm -rf /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi
+            log_ok "CleanBackups Uninstalled"
+            PL_CLN="Uninstalled"
             return 0
         fi
     elif ! ask_yn "Enable CleanBackups?"; then 
@@ -725,9 +825,17 @@ check_install_watchmysql() {
     log_section "WatchMySQL"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ]; then
         log_ok "WatchMySQL — Configure Before"
-        if ! ask_yn_timeout "WatchMySQL already configured. Do you want to reconfigure it?" 30; then
+        ask_reconfig_uninstall_timeout "WatchMySQL already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
             log_warn "Skipped WatchMySQL configuration"
             PL_WMY="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling WatchMySQL..."
+            rm -rf /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi
+            log_ok "WatchMySQL Uninstalled"
+            PL_WMY="Uninstalled"
             return 0
         fi
     elif ! ask_yn "Enable WatchMySQL?"; then 
@@ -751,32 +859,82 @@ check_install_watchmysql() {
     fi
 }
 
+
 check_install_softaculous() {
     log_section "Softaculous"
     if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/softaculous/index.cgi ]; then
-        log_ok "Softaculous already installed"; return 0; fi
-    if ! ask_yn "Softaculous not found. Install?"; then log_warn "Skipped"; return 0; fi
+        log_ok "Softaculous — Configure Before"
+        ask_reconfig_uninstall_timeout "Softaculous already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped Softaculous configuration"
+            PL_SOFT="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling Softaculous..."
+            wget -q -N http://files.softaculous.com/install.sh -O /tmp/soft.sh
+            chmod 755 /tmp/soft.sh && /tmp/soft.sh --uninstall 2>/dev/null
+            rm -f /tmp/soft.sh
+            log_ok "Softaculous Uninstalled"
+            PL_SOFT="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Softaculous not found. Install?"; then 
+        log_warn "Skipped"
+        PL_SOFT="Skipped"
+        return 0
+    fi
     wget -N https://files.softaculous.com/install.sh -O /tmp/soft.sh
     chmod 755 /tmp/soft.sh && bash /tmp/soft.sh && rm -f /tmp/soft.sh
     log_ok "Softaculous installed"
+    PL_SOFT="Installed"
 }
 
 check_install_wptoolkit() {
     log_section "WP Toolkit"
     if [ -d /usr/local/cpanel/3rdparty/wp-toolkit ]; then
-        log_ok "WP Toolkit already installed"; return 0; fi
-    if ! ask_yn "WP Toolkit not found. Install?"; then log_warn "Skipped"; return 0; fi
+        log_ok "WP Toolkit — Configure Before"
+        ask_reconfig_uninstall_timeout "WP Toolkit already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped WP Toolkit configuration"
+            PL_WPT="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling WP Toolkit..."
+            sh /usr/local/cpanel/3rdparty/wp-toolkit/bin/installer.sh --uninstall 2>/dev/null || rpm -e wp-toolkit-cpanel 2>/dev/null
+            log_ok "WP Toolkit Uninstalled"
+            PL_WPT="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "WP Toolkit not found. Install?"; then 
+        log_warn "Skipped"
+        PL_WPT="Skipped"
+        return 0
+    fi
     wget -q https://wp-toolkit.plesk.com/cPanel/installer.sh -O /tmp/wpt.sh
     chmod +x /tmp/wpt.sh && sh /tmp/wpt.sh && rm -f /tmp/wpt.sh
     log_ok "WP Toolkit installed"
+    PL_WPT="Installed"
 }
 
 check_install_jetbackup() {
     log_section "JetBackup"
     if command -v jetbackup5 &>/dev/null || [ -d /usr/local/jetapps/var/lib/jetbackup5/Core/ ]; then
-        log_ok "JetBackup 5 is already installed — skipping"
-        PL_JB5="Installed (Pre-existing)"
-        return 0
+        log_ok "JetBackup 5 — Configure Before"
+        ask_reconfig_uninstall_timeout "JetBackup 5 already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped JetBackup configuration"
+            PL_JB5="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling JetBackup 5..."
+            jetapps --uninstall jetbackup5-cpanel 2>/dev/null
+            log_ok "JetBackup 5 Uninstalled"
+            PL_JB5="Uninstalled"
+            return 0
+        fi
     fi
     if command -v jetbackup &>/dev/null || [ -d /usr/local/jetapps/var/lib/JetBackup/Core/ ]; then
         log_warn "JetBackup 4 is already installed — skipping (EOL / No direct upgrade to JB5)"
@@ -810,8 +968,27 @@ check_install_jetbackup() {
 check_install_imunify360() {
     log_section "Imunify360"
     if command -v imunify360-agent &>/dev/null; then
-        log_ok "Imunify360 already installed"; PL_IMU="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "Imunify360 not found. Install?"; then log_warn "Skipped"; PL_IMU="Skipped"; return 0; fi
+        log_ok "Imunify360 — Configure Before"
+        ask_reconfig_uninstall_timeout "Imunify360 already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped Imunify360 configuration"
+            PL_IMU="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling Imunify360..."
+            wget -q https://repo.imunify360.cloudlinux.com/defence360/imunify-deploy.sh -O /tmp/imu.sh
+            bash /tmp/imu.sh --uninstall 2>/dev/null
+            rm -f /tmp/imu.sh
+            log_ok "Imunify360 Uninstalled"
+            PL_IMU="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Imunify360 not found. Install?"; then 
+        log_warn "Skipped"
+        PL_IMU="Skipped"
+        return 0
+    fi
     echo "  [1] Imunify360 (Full — requires license)"
     echo "  [2] ImunifyAV+ (requires license)"
     echo "  [3] ImunifyAV Free"
@@ -831,8 +1008,25 @@ check_install_imunify360() {
 check_install_litespeed() {
     log_section "LiteSpeed Web Server"
     if [ -f /usr/local/lsws/bin/lshttpd ]; then
-        log_ok "LiteSpeed already installed"; PL_LS="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "LiteSpeed not found. Install?"; then log_warn "Skipped"; PL_LS="Skipped"; return 0; fi
+        log_ok "LiteSpeed — Configure Before"
+        ask_reconfig_uninstall_timeout "LiteSpeed already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped LiteSpeed configuration"
+            PL_LS="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling LiteSpeed..."
+            /usr/local/lsws/admin/misc/uninstall.sh 2>/dev/null
+            log_ok "LiteSpeed Uninstalled"
+            PL_LS="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "LiteSpeed not found. Install?"; then 
+        log_warn "Skipped"
+        PL_LS="Skipped"
+        return 0
+    fi
 
     echo "  [1] Trial License (15 days)"
     echo "  [2] Serial Number"
@@ -944,9 +1138,27 @@ EOF
 # ═══════════════════════════════════════════
 check_install_redis_memcached() {
     log_section "Redis & Memcached"
-    if systemctl is-active --quiet redis redis-server 2>/dev/null && systemctl is-active --quiet memcached 2>/dev/null; then
-        log_ok "Redis/Memcached already active"; PL_CACHE="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "Install Redis & Memcached Object Caching?"; then log_warn "Skipped"; PL_CACHE="Skipped"; return 0; fi
+    if systemctl is-active --quiet redis 2>/dev/null || systemctl is-active --quiet redis-server 2>/dev/null || systemctl is-active --quiet memcached 2>/dev/null; then
+        log_ok "Redis/Memcached — Configure Before"
+        ask_reconfig_uninstall_timeout "Redis/Memcached already active. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped Redis/Memcached configuration"
+            PL_CACHE="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling Redis/Memcached..."
+            systemctl stop redis-server memcached redis 2>/dev/null
+            yum remove -y redis memcached 2>/dev/null || apt-get remove -y redis-server memcached 2>/dev/null
+            log_ok "Redis/Memcached Uninstalled"
+            PL_CACHE="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install Redis & Memcached Object Caching?"; then 
+        log_warn "Skipped"
+        PL_CACHE="Skipped"
+        return 0
+    fi
 
     log_info "Installing services..."
     if echo "$OS" | grep -iq "ubuntu\|debian"; then
@@ -970,9 +1182,18 @@ setup_telegram_alerts() {
     log_section "Capnel Security Alerts To Telegram"
     if [ -f /root/.telegram_installed ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
         log_ok "cPanel Security Alerts To Telegram — Configure Before"
-        if ! ask_yn_timeout "cPanel Security Alerts To Telegram already configured. Do you want to reconfigure it?" 30; then
+        ask_reconfig_uninstall_timeout "cPanel Security Alerts To Telegram already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
             log_warn "Skipped Telegram integration."
             PL_TG="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling Telegram integration..."
+            rm -f /usr/local/bin/telegram-alert /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php /root/.telegram_installed
+            sed -i '/telegram-alert/d' /etc/csf/csfpost.sh 2>/dev/null
+            log_ok "Telegram integration Uninstalled"
+            PL_TG="Uninstalled"
             return 0
         fi
     elif ! ask_yn "Enable cPanel Security Alerts To Telegram?"; then 
@@ -1050,8 +1271,27 @@ check_install_cloudlinux() {
     if echo "$OS" | grep -iq "ubuntu\|debian"; then
         log_warn "CloudLinux not supported on Ubuntu/Debian — skipping"; PL_CL="Skipped (OS unsupported)"; return 0; fi
     if grep -qi "cloudlinux" /etc/os-release 2>/dev/null; then
-        log_ok "CloudLinux already installed"; PL_CL="Installed (Pre-existing)"; return 0; fi
-    if ! ask_yn "CloudLinux not found. Install?"; then log_warn "Skipped"; PL_CL="Skipped"; return 0; fi
+        log_ok "CloudLinux — Configure Before"
+        ask_reconfig_uninstall_timeout "CloudLinux already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped CloudLinux configuration"
+            PL_CL="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CloudLinux..."
+            wget -q https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /tmp/cldeploy
+            bash /tmp/cldeploy -c 2>/dev/null
+            rm -f /tmp/cldeploy
+            log_ok "CloudLinux Uninstalled"
+            PL_CL="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "CloudLinux not found. Install?"; then 
+        log_warn "Skipped"
+        PL_CL="Skipped"
+        return 0
+    fi
     read -rp "  License Key (Enter for IP activation): " CL_KEY </dev/tty
     wget -q https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /tmp/cldeploy
     chmod +x /tmp/cldeploy
@@ -1214,6 +1454,14 @@ EOF
 configure_whm_tweaks() {
     log_section "WHM Tweak Settings & Basic Config"
     [ ! -d /usr/local/cpanel ] && { log_warn "cPanel not found"; return 1; }
+
+    if grep -q "^TTL 900" /etc/wwwacct.conf 2>/dev/null; then
+        log_ok "WHM Tweak Settings & Basic Config — Configure Before"
+        if ! ask_yn_timeout "WHM Tweak Settings already configured. Do you want to reconfigure it?" 30; then
+            log_warn "Skipped WHM Tweak Settings configuration"
+            return 0
+        fi
+    fi
 
     HOSTNAME_LONG=$(hostname -d 2>/dev/null || hostname -f)
 

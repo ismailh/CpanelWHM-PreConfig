@@ -1507,7 +1507,7 @@ main() {
         echo -ne "  ${YELLOW}Press ENTER to continue...${NC} " >/dev/tty
         read -r </dev/tty
         
-        if [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
+        if [ -f /etc/csf/csfpost.sh ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
             log_ok "cPanel Security Alerts To Telegram already configured."
             TG_YESNO="n"
         else

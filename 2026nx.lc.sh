@@ -619,7 +619,7 @@ check_install_cmc() {
     log_info "Downloading and installing CMC..."
     cd /usr/src || return 1
     rm -f cmc.tgz
-    wget -qO cmc.tgz https://download.configserver.com/cmc.tgz
+    wget -qO cmc.tgz https://raw.githubusercontent.com/systechICTltd/ConfigServer-Scripts/main/cmc.tgz
     tar -xzf cmc.tgz
     cd cmc || return 1
     sh install.sh &>/dev/null
@@ -636,20 +636,21 @@ check_install_cmc() {
 
 check_install_dnscheck() {
     log_section "Account DNS Check"
-    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ]; then
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ]; then
         log_ok "Account DNS Check already installed"; PL_DNS="Installed (Pre-existing)"; return 0; fi
     if ! ask_yn "Account DNS Check not found. Install?"; then log_warn "Skipped"; PL_DNS="Skipped"; return 0; fi
-    wget -q -O /usr/src/accountdnscheck.tgz https://files.ndchost.com/scripts/accountdnscheck/accountdnscheck.tgz
-    if [ -s /usr/src/accountdnscheck.tgz ]; then
-        cd /usr/src || return 1
-        tar -xzf accountdnscheck.tgz 2>/dev/null
-        cd accountdnscheck
-        sh install.sh 2>/dev/null
-        rm -Rfv /usr/src/accountdnscheck* 2>/dev/null
+
+    log_info "Downloading and installing Account DNS Check..."
+    cd /usr/src || return 1
+    rm -f latest-accountdnscheck
+    wget -q http://download.ndchost.com/accountdnscheck/latest-accountdnscheck
+    if [ -s latest-accountdnscheck ]; then
+        sh latest-accountdnscheck 2>/dev/null
         log_ok "Account DNS Check installed"
         PL_DNS="Installed"
+        rm -f latest-accountdnscheck
     else
-        log_error "Account DNS Check install failed."
+        log_error "Account DNS Check download failed."
         PL_DNS="Failed"
     fi
 }
@@ -840,6 +841,88 @@ EOF
 
     log_ok "LiteSpeed installed on $OS $VER"
     PL_LS="Installed"
+}
+
+# ═══════════════════════════════════════════
+# REDIS & MEMCACHED (Object Caching)
+# ═══════════════════════════════════════════
+check_install_redis_memcached() {
+    log_section "Redis & Memcached"
+    if systemctl is-active --quiet redis redis-server 2>/dev/null && systemctl is-active --quiet memcached 2>/dev/null; then
+        log_ok "Redis/Memcached already active"; PL_CACHE="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "Install Redis & Memcached Object Caching?"; then log_warn "Skipped"; PL_CACHE="Skipped"; return 0; fi
+
+    log_info "Installing services..."
+    if echo "$OS" | grep -iq "ubuntu\|debian"; then
+        apt-get install -y redis-server memcached 2>/dev/null || true
+        systemctl enable redis-server memcached 2>/dev/null || true
+        systemctl start redis-server memcached 2>/dev/null || true
+    else
+        local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
+        $PKG install -y redis memcached 2>/dev/null || true
+        systemctl enable redis memcached 2>/dev/null || true
+        systemctl start redis memcached 2>/dev/null || true
+    fi
+    log_ok "Redis & Memcached services installed and started"
+    PL_CACHE="Installed"
+}
+
+# ═══════════════════════════════════════════
+# TELEGRAM ALERTS
+# ═══════════════════════════════════════════
+setup_telegram_alerts() {
+    log_section "Capnel Security Alerts To Telegram"
+    if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHATID" ]; then
+        log_warn "Skipped (No credentials)"
+        PL_TG="Skipped"
+        return 0
+    fi
+
+    log_info "Creating Telegram Alert Wrapper..."
+    # 1. Create a global Bash script
+    cat > /usr/local/bin/telegram-alert << 'EOF'
+#!/bin/bash
+TOKEN="YOUR_TG_TOKEN"
+CHATID="YOUR_TG_CHATID"
+TEXT="$1"
+if [ -n "$TEXT" ]; then
+    curl -s -d "chat_id=$CHATID&text=$TEXT" -X POST "https://api.telegram.org/bot$TOKEN/sendMessage" >/dev/null
+fi
+EOF
+    sed -i "s/YOUR_TG_TOKEN/$TG_TOKEN/g" /usr/local/bin/telegram-alert
+    sed -i "s/YOUR_TG_CHATID/$TG_CHATID/g" /usr/local/bin/telegram-alert
+    chmod +x /usr/local/bin/telegram-alert
+
+    log_info "Integrating with CSF & WHM Contact Manager..."
+    # 2. Add to CSF Post-Execution
+    if [ -d /etc/csf ]; then
+        echo "/usr/local/bin/telegram-alert \"🛡️ CSF Firewall Alert on \$(hostname): \$1\"" >> /etc/csf/csfpost.sh
+        chmod +x /etc/csf/csfpost.sh
+    fi
+
+    # 3. Add WHM Contact Manager Webhook Bridge
+    mkdir -p /usr/local/cpanel/whostmgr/docroot/cgi
+    cat > /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php << 'EOF'
+<?php
+$token = "YOUR_TG_TOKEN";
+$chat_id = "YOUR_TG_CHATID";
+$payload = file_get_contents('php://input');
+if($payload) {
+    $data = json_decode($payload, true);
+    $msg = "🔔 WHM Alert: " . ($data['subject'] ?? 'Notification') . "\n\n" . ($data['body'] ?? '');
+    file_get_contents("https://api.telegram.org/bot$token/sendMessage?chat_id=$chat_id&text=" . urlencode($msg));
+}
+EOF
+    sed -i "s/YOUR_TG_TOKEN/$TG_TOKEN/g" /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php
+    sed -i "s/YOUR_TG_CHATID/$TG_CHATID/g" /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php
+    chown root:root /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php
+    chmod 755 /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php
+    
+    # Send completion alert
+    /usr/local/bin/telegram-alert "✅ WHM/cPanel Deployment v3.0 Successfully Completed on IP: $PUBLIC_IP"
+    
+    log_ok "Telegram Security Alerts Configured!"
+    PL_TG="Installed"
 }
 
 # ═══════════════════════════════════════════
@@ -1336,16 +1419,16 @@ second_run() {
     configure_whm_tweaks
     check_install_cmq
     check_install_cmc
-    check_install_dns_check
+    check_install_dnscheck
     check_install_softaculous
     check_install_wptoolkit
     check_install_jetbackup
     check_install_imunify360
     check_install_litespeed
-    check_install_redis_memcached
     check_install_cloudlinux
-    setup_telegram_alerts
     install_ea4_php
+    check_install_redis_memcached
+    setup_telegram_alerts
     # Final CSF reconfiguration (pick up LiteSpeed/Imunify ports)
     _configure_csf
     check_licenses
@@ -1424,16 +1507,21 @@ main() {
         echo -ne "  ${YELLOW}Press ENTER to continue...${NC} " >/dev/tty
         read -r </dev/tty
         
-        echo -ne "  ${YELLOW}[Optional]${NC} Enable cPanel Security Alerts To Telegram? (y/n): " >/dev/tty
-        read -r TG_YESNO </dev/tty
-        if [ "$TG_YESNO" = "y" ] || [ "$TG_YESNO" = "Y" ]; then
-            echo -ne "  ${CYAN}➔ Enter Telegram Bot Token:${NC} " >/dev/tty
-            read -r TG_TOKEN </dev/tty
-            echo -ne "  ${CYAN}➔ Enter Telegram Chat ID:${NC} " >/dev/tty
-            read -r TG_CHATID </dev/tty
-            echo -e "  ${GREEN}[OK] Telegram alerts will be configured.${NC}\n"
+        if [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
+            log_ok "cPanel Security Alerts To Telegram already configured."
+            TG_YESNO="n"
         else
-            echo -e "  ${YELLOW}➔ Skipped Telegram integration.${NC}\n"
+            echo -ne "  ${YELLOW}[Optional]${NC} Enable cPanel Security Alerts To Telegram? (y/n): " >/dev/tty
+            read -r TG_YESNO </dev/tty
+            if [ "$TG_YESNO" = "y" ] || [ "$TG_YESNO" = "Y" ]; then
+                echo -ne "  ${CYAN}➔ Enter Telegram Bot Token:${NC} " >/dev/tty
+                read -r TG_TOKEN </dev/tty
+                echo -ne "  ${CYAN}➔ Enter Telegram Chat ID:${NC} " >/dev/tty
+                read -r TG_CHATID </dev/tty
+                echo -e "  ${GREEN}[OK] Telegram alerts will be configured.${NC}\n"
+            else
+                echo -e "  ${YELLOW}➔ Skipped Telegram integration.${NC}\n"
+            fi
         fi
         
         export TG_TOKEN

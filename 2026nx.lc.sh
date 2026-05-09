@@ -131,14 +131,18 @@ detect_os() {
     export OS VER OS_MAJOR
 
     # Check hardware environment
+    SERVER_TYPE="Unknown"
     if command -v systemd-detect-virt &>/dev/null; then
         VIRT=$(systemd-detect-virt 2>/dev/null || echo "none")
         if [ "$VIRT" = "none" ]; then
             log_info "Detected Hardware: Bare Metal Server"
+            SERVER_TYPE="Bare Metal Server"
         else
             log_info "Detected Hardware: Virtualized Environment ($VIRT)"
+            SERVER_TYPE="VPS ($VIRT)"
         fi
     fi
+    export SERVER_TYPE
 }
 
 # ── PKG MANAGER HELPER ──
@@ -517,7 +521,7 @@ _configure_csf() {
     local CSF="/etc/csf/csf.conf"
 
     if grep -q "$SSH_PORT" "$CSF" 2>/dev/null && [ -z "$CSF_RECONFIG_CHOICE" ]; then
-        log_ok "CSF Firewall — Configure Before"
+        log_ok "CSF Firewall — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "CSF Firewall already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -654,7 +658,7 @@ EOF
 check_install_cmq() {
     log_section "ConfigServer Mail Queues (CMQ)"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmq ]; then
-        log_ok "CMQ — Configure Before"
+        log_ok "CMQ — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "CMQ already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -705,7 +709,7 @@ check_install_cmq() {
 check_install_cmc() {
     log_section "ConfigServer ModSecurity Control (CMC)"
     if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/configserver/cmc.cgi ]; then
-        log_ok "CMC — Configure Before"
+        log_ok "CMC — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "CMC already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -748,7 +752,7 @@ check_install_cmc() {
 check_install_dnscheck() {
     log_section "Account DNS Check"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ]; then
-        log_ok "Account DNS Check — Configure Before"
+        log_ok "Account DNS Check — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "Account DNS Check already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -786,7 +790,7 @@ check_install_dnscheck() {
 check_install_cleanbackups() {
     log_section "CleanBackups"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi ]; then
-        log_ok "CleanBackups — Configure Before"
+        log_ok "CleanBackups — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "CleanBackups already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -824,7 +828,7 @@ check_install_cleanbackups() {
 check_install_watchmysql() {
     log_section "WatchMySQL"
     if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ]; then
-        log_ok "WatchMySQL — Configure Before"
+        log_ok "WatchMySQL — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "WatchMySQL already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -863,7 +867,7 @@ check_install_watchmysql() {
 check_install_softaculous() {
     log_section "Softaculous"
     if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/softaculous/index.cgi ]; then
-        log_ok "Softaculous — Configure Before"
+        log_ok "Softaculous — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "Softaculous already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -893,7 +897,7 @@ check_install_softaculous() {
 check_install_wptoolkit() {
     log_section "WP Toolkit"
     if [ -d /usr/local/cpanel/3rdparty/wp-toolkit ]; then
-        log_ok "WP Toolkit — Configure Before"
+        log_ok "WP Toolkit — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "WP Toolkit already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -921,7 +925,7 @@ check_install_wptoolkit() {
 check_install_jetbackup() {
     log_section "JetBackup"
     if command -v jetbackup5 &>/dev/null || [ -d /usr/local/jetapps/var/lib/jetbackup5/Core/ ]; then
-        log_ok "JetBackup 5 — Configure Before"
+        log_ok "JetBackup 5 — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "JetBackup 5 already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -968,7 +972,7 @@ check_install_jetbackup() {
 check_install_imunify360() {
     log_section "Imunify360"
     if command -v imunify360-agent &>/dev/null; then
-        log_ok "Imunify360 — Configure Before"
+        log_ok "Imunify360 — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "Imunify360 already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -1008,7 +1012,7 @@ check_install_imunify360() {
 check_install_litespeed() {
     log_section "LiteSpeed Web Server"
     if [ -f /usr/local/lsws/bin/lshttpd ]; then
-        log_ok "LiteSpeed — Configure Before"
+        log_ok "LiteSpeed — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "LiteSpeed already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -1139,7 +1143,7 @@ EOF
 check_install_redis_memcached() {
     log_section "Redis & Memcached"
     if systemctl is-active --quiet redis 2>/dev/null || systemctl is-active --quiet redis-server 2>/dev/null || systemctl is-active --quiet memcached 2>/dev/null; then
-        log_ok "Redis/Memcached — Configure Before"
+        log_ok "Redis/Memcached — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "Redis/Memcached already active. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -1181,7 +1185,7 @@ check_install_redis_memcached() {
 setup_telegram_alerts() {
     log_section "Capnel Security Alerts To Telegram"
     if [ -f /root/.telegram_installed ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
-        log_ok "cPanel Security Alerts To Telegram — Configure Before"
+        log_ok "cPanel Security Alerts To Telegram — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "cPanel Security Alerts To Telegram already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -1271,7 +1275,7 @@ check_install_cloudlinux() {
     if echo "$OS" | grep -iq "ubuntu\|debian"; then
         log_warn "CloudLinux not supported on Ubuntu/Debian — skipping"; PL_CL="Skipped (OS unsupported)"; return 0; fi
     if grep -qi "cloudlinux" /etc/os-release 2>/dev/null; then
-        log_ok "CloudLinux — Configure Before"
+        log_ok "CloudLinux — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "CloudLinux already configured. What would you like to do?" 30
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -1314,7 +1318,7 @@ install_ea4_php() {
     log_section "EA4 PHP 7.4–8.4 + Extensions"
 
     if [ -f /var/cpanel/ApachePHPFPM/system_pool_defaults.yaml ] || [ -d /opt/cpanel/ea-php81 ]; then
-        log_ok "EA4 PHP 7.4–8.4 + Extensions — Configure Before"
+        log_ok "EA4 PHP 7.4–8.4 + Extensions — Configure / Installed Before"
         if ! ask_yn_timeout "EA4 PHP already configured. Do you want to reconfigure it?" 30; then
             log_warn "Skipped EA4 PHP configuration"
             return 0
@@ -1456,7 +1460,7 @@ configure_whm_tweaks() {
     [ ! -d /usr/local/cpanel ] && { log_warn "cPanel not found"; return 1; }
 
     if grep -q "^TTL 900" /etc/wwwacct.conf 2>/dev/null; then
-        log_ok "WHM Tweak Settings & Basic Config — Configure Before"
+        log_ok "WHM Tweak Settings & Basic Config — Configure / Installed Before"
         if ! ask_yn_timeout "WHM Tweak Settings already configured. Do you want to reconfigure it?" 30; then
             log_warn "Skipped WHM Tweak Settings configuration"
             return 0
@@ -1720,6 +1724,21 @@ check_licenses() {
         LIC_SOFT=$(php /usr/local/cpanel/whostmgr/docroot/cgi/softaculous/cli.php -l 2>/dev/null | grep -i "License Type" | awk -F':' '{print $2}' | xargs)
         [ -z "$LIC_SOFT" ] && LIC_SOFT="Unknown"
     fi
+
+    # Imunify360
+    log_info "Checking Imunify360 license..."
+    LIC_IMU="Not Installed"
+    if command -v imunify360-agent >/dev/null 2>&1; then
+        local IMU_OUT
+        IMU_OUT=$(imunify360-agent status 2>&1)
+        if echo "$IMU_OUT" | grep -iq "License is active"; then
+            LIC_IMU="Active"
+        elif echo "$IMU_OUT" | grep -iq "expired"; then
+            LIC_IMU="Expired"
+        else
+            LIC_IMU="Unknown / Free"
+        fi
+    fi
 }
 
 # ═══════════════════════════════════════════
@@ -1730,9 +1749,10 @@ print_summary() {
     CPANEL_VER=$(/usr/local/cpanel/cpanel -V 2>/dev/null | awk '{print $1}' || echo "N/A")
     echo -e "${GREEN}${BOLD}"
     echo "  ╔══════════════════════════════════════════════════╗"
-    echo "  ║  WHM/cPanel PreConfig v2.0 — COMPLETE           ║"
+    echo "  ║  WHM/cPanel PreConfig v3.0 - All-in-One Deployment"
     echo "  ╠══════════════════════════════════════════════════╣"
-    printf "  ║  %-12s : %-33s║\n" "Date"      "$(date '+%Y-%m-%d %H:%M UTC')"
+    printf "  ║  %-12s : %-33s║\n" "Date"        "$(date '+%Y-%m-%d %H:%M UTC')"
+    printf "  ║  %-12s : %-33s║\n" "Server Type" "${SERVER_TYPE:0:33}"
     printf "  ║  %-12s : %-33s║\n" "Hostname"  "$(hostname)"
     printf "  ║  %-12s : %-33s║\n" "OS"        "$OS $VER"
     printf "  ║  %-12s : %-33s║\n" "cPanel"    "$CPANEL_VER"
@@ -1763,6 +1783,7 @@ print_summary() {
     [ "$LIC_CL" != "Not Installed" ]   && printf "  ║  %-12s : %-33s║\n" "CloudLinux"  "${LIC_CL}"
     [ "$LIC_JB5" != "Not Installed" ]  && printf "  ║  %-12s : %-33s║\n" "JetBackup 5" "${LIC_JB5}"
     [ "$LIC_SOFT" != "Not Installed" ] && printf "  ║  %-12s : %-33s║\n" "Softaculous" "${LIC_SOFT}"
+    [ "$LIC_IMU" != "Not Installed" ]  && printf "  ║  %-12s : %-33s║\n" "Imunify360"  "${LIC_IMU}"
     echo "  ╚══════════════════════════════════════════════════╝"
     echo -e "${NC}"
     if ask_yn "Reboot now?"; then
@@ -1845,6 +1866,7 @@ main() {
     echo "  ║  SERVER SYSTEM INFORMATION:                                        ║"
     echo "  ╠════════════════════════════════════════════════════════════════════╣"
     printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Date" "$(date '+%Y-%m-%d %H:%M UTC')"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Server Type" "${SERVER_TYPE:0:49}"
     printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Hostname" "${SYS_HOST:0:49}"
     printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Server IP" "${PUBLIC_IP:0:49}"
     printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "OS Info" "${OS_INFO:0:49}"

@@ -1563,6 +1563,50 @@ install_ea4_php() {
         fi
     fi
 
+    # ── Detect and remove deprecated/EOL PHP versions ──
+    local EOL_PHP_VERSIONS="56 70 71 72 73"
+    local EOL_FOUND=""
+    for EV in $EOL_PHP_VERSIONS; do
+        if [ -d "/opt/cpanel/ea-php${EV}" ]; then
+            local PHP_BIN="/opt/cpanel/ea-php${EV}/root/usr/bin/php"
+            local PHP_FULL_VER=""
+            if [ -x "$PHP_BIN" ]; then
+                PHP_FULL_VER=$($PHP_BIN -v 2>/dev/null | head -1 | awk '{print $2}')
+            fi
+            if [ -n "$PHP_FULL_VER" ]; then
+                log_warn "Found EOL PHP: ${PHP_FULL_VER} ($PHP_BIN)"
+            else
+                log_warn "Found EOL PHP: ea-php${EV} (/opt/cpanel/ea-php${EV})"
+            fi
+            EOL_FOUND="$EOL_FOUND ea-php${EV}"
+        fi
+    done
+
+    if [ -n "$EOL_FOUND" ]; then
+        echo ""
+        log_warn "⚠️  The following End-Of-Life PHP versions are installed and are a security risk:"
+        for EP in $EOL_FOUND; do
+            echo -e "      ${RED}✘${NC} $EP"
+        done
+        echo ""
+        if ask_yn_timeout "Remove these deprecated PHP versions? (Recommended)" 30; then
+            log_info "Removing EOL PHP versions..."
+            local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
+            for EP in $EOL_FOUND; do
+                log_info "Removing ${EP} and all extensions..."
+                if echo "$OS" | grep -iq "ubuntu\|debian"; then
+                    apt-get remove -y ${EP}* 2>/dev/null || true
+                    apt-get autoremove -y 2>/dev/null || true
+                else
+                    $PKG remove -y ${EP}* 2>/dev/null || true
+                fi
+            done
+            log_ok "EOL PHP versions removed"
+        else
+            log_warn "Keeping EOL PHP versions — skipping them during configuration"
+        fi
+    fi
+
     # Install libsodium
     if echo "$OS" | grep -iq "ubuntu\|debian"; then
         apt-get install -y libsodium-dev libsodium23 2>/dev/null || true

@@ -713,11 +713,9 @@ check_install_litespeed() {
 
     echo "  [1] Trial License (15 days)"
     echo "  [2] Serial Number"
-    echo "  [3] OpenLiteSpeed Free"
-    read -rp "  Select [1/2/3]: " LS_OPT </dev/tty
+    read -rp "  Select [1/2]: " LS_OPT </dev/tty
     case "$LS_OPT" in
         2) read -rp "  Serial: " LS_SERIAL </dev/tty ;;
-        3) LS_SERIAL="0" ;;
         *) LS_SERIAL="TRIAL" ;;
     esac
 

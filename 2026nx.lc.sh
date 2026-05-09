@@ -1300,7 +1300,7 @@ first_run() {
 }
 
 second_run() {
-    log_section "SECOND RUN — cPanel + Full Configuration"
+    log_section "cPanel + Plugins + PHP + Config"
     install_cpanel
     _install_csf
     _configure_csf
@@ -1388,6 +1388,9 @@ main() {
         first_run
     else
         echo -e "${GREEN}${BOLD}  ── This script has run before on your server. Now configuring next steps... ──${NC}\n"
+        echo -ne "  ${YELLOW}Press ENTER to continue...${NC} " >/dev/tty
+        read -r </dev/tty
+        echo ""
         second_run
     fi
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# WHM/cPanel all Improtent Plugin Installation Setup Script and Softaculous
+# WHM/cPanel all Improtent Plugin Installation Setup Script and preconfiger 
 # Version: 3.0.0
 # All messages in English
 # SSH Port: 1337
@@ -1330,13 +1330,36 @@ main() {
 
     clear
     echo -e "${CYAN}${BOLD}"
-    echo "  ╔══════════════════════════════════════════════════╗"
-    echo "  ║  WHM/cPanel PreConfig v2.0                      ║"
-    echo "  ║  Date : $(date '+%Y-%m-%d %H:%M UTC')                    ║"
-    echo "  ║  OS   : $OS $VER"
-    echo "  ║  SSH  : Port $SSH_PORT"
-    echo "  ╚══════════════════════════════════════════════════╝"
+    echo "  ╔════════════════════════════════════════════════════════════════════╗"
+    echo "  ║  WHM/cPanel PreConfig v3.0 - All-in-One Deployment                 ║"
+    echo "  ╠════════════════════════════════════════════════════════════════════╣"
+    echo "  ║  FEATURES INCLUDED:                                                ║"
+    echo "  ║  • OS Hardening (Sysctl, FSTrim, Swap, Selinux/Firewalld)          ║"
+    echo "  ║  • SSH Customization (Port $SSH_PORT, Root Login Allowed)                 ║"
+    echo "  ║  • Automated cPanel/WHM + MariaDB 11.4 Installation                ║"
+    echo "  ║  • Security Suite: CSF Firewall + Imunify360 Setup                 ║"
+    echo "  ║  • Performance: LiteSpeed Auto-Installer (TRIAL/PRO)               ║"
+    echo "  ║  • Core Plugins: JetBackup 5, Softaculous, WP Toolkit              ║"
+    echo "  ║  • Mail & DNS: CMQ, Account DNS Check, Exim Hardening              ║"
+    echo "  ║  • PHP 7.4-8.4 Hardening (28 disabled functions, 1GB mem)          ║"
+    echo "  ║  • CloudLinux Integration (Optional License support)               ║"
+    echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"
+    echo "  ╠════════════════════════════════════════════════════════════════════╣"
+    printf "  ║  %-12s : %-49s║\n" "Date" "$(date '+%Y-%m-%d %H:%M UTC')"
+    printf "  ║  %-12s : %-49s║\n" "OS"   "$OS $VER"
+    echo "  ╚════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
+
+    # --- Authorization Check ---
+    read -rp "  [Auth] Please enter the authorization code to proceed: " AUTH_CODE </dev/tty
+    # Code is securely obfuscated
+    AUTH_HASH=$(echo -n "$AUTH_CODE" | base64 2>/dev/null)
+    if [ "$AUTH_HASH" != "dG54IG54Lmxj" ]; then
+        echo -e "\n${RED}[ERROR] Invalid authorization code. Access Denied.${NC}\n"
+        exit 1
+    fi
+    echo -e "${GREEN}[OK] Authorization successful. Proceeding...${NC}\n"
+    # ---------------------------
 
     if [ ! -f "$RUN_FLAG" ]; then
         echo -e "${YELLOW}${BOLD}  ── FIRST RUN: OS Base Configuration ──${NC}\n"

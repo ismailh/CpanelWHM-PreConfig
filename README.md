@@ -29,6 +29,8 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/head
 - **Custom SSH Port:** `1337` (Root login allowed with Password Auth enabled)
 - **Firewall:** IPTables / Firewalld replaced natively with **CSF (ConfigServer Security & Firewall)**.
 - **Kernel Tuning:** Sysctl optimizations for network performance, swap reduced to 10.
+- **Service Optimization:** Stops and disables unused background services (telnet, rsh, rlogin, rexec, finger, talk, ntalk, rpcbind).
+- **CloudLinux Symlink Protection:** Configured with `fs.enforce_symlinksifowner` via `sysctl` dynamically based on the nobody user group (if CloudLinux is installed).
 - **Compiler Access:** Completely restricted for security (`compilers off`).
 - **Protection:** Shell Fork Bomb Protection enabled by default.
 
@@ -55,6 +57,7 @@ During the setup, the script intelligently asks if you'd like to install the fol
 
 - **LiteSpeed Web Server** *(Trial or Custom Serial)*
 - **CloudLinux OS** *(License Activation Supported)*
+- **CloudLinux CageFS** *(Automated setup & mount/unmount logic)*
 - **JetBackup 5** *(Stable/Edge branch selection)*
 - **Imunify360** *(Full, ImunifyAV+, or Free)*
 - **Softaculous**
@@ -64,6 +67,7 @@ During the setup, the script intelligently asks if you'd like to install the fol
 - **Account DNS Check**
 - **CleanBackups**
 - **WatchMySQL**
+- **MailBaby Smarthost** *(Automated Exim routing integration)*
 - **Redis & Memcached** *(Object Caching Daemons + EA4 PHP Extensions)*
 - **cPanel Security Alerts To Telegram** *(CSF & WHM Contact Manager Integration)*
 

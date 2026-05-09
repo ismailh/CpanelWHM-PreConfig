@@ -1345,18 +1345,33 @@ main() {
     echo "  ║  • PHP 7.4-8.4 Hardening (28 disabled functions, 1GB mem)          ║"
     echo "  ║  • CloudLinux Integration (Optional License support)               ║"
     echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"
+    SYS_UPTIME=$(uptime -p 2>/dev/null || echo "Unknown")
+    SYS_KERNEL=$(uname -r)
+    SYS_HOST=$(hostname -f 2>/dev/null || hostname)
+    SYS_USER=$(whoami)
+    OS_INFO="$OS $VER"
+
     echo "  ╠════════════════════════════════════════════════════════════════════╣"
-    printf "  ║  %-12s : %-49s║\n" "Date" "$(date '+%Y-%m-%d %H:%M UTC')"
-    printf "  ║  %-12s : %-49s║\n" "OS"   "$OS $VER"
+    echo "  ║  SERVER SYSTEM INFORMATION:                                        ║"
+    echo "  ╠════════════════════════════════════════════════════════════════════╣"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Date" "$(date '+%Y-%m-%d %H:%M UTC')"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Hostname" "${SYS_HOST:0:49}"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Server IP" "${PUBLIC_IP:0:49}"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "OS Info" "${OS_INFO:0:49}"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Kernel" "${SYS_KERNEL:0:49}"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "Uptime" "${SYS_UPTIME:0:49}"
+    printf "  ║  ${YELLOW}%-12s${CYAN} : ${GREEN}%-49s${CYAN}║\n" "User" "${SYS_USER:0:49}"
     echo "  ╚════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 
     # --- Authorization Check ---
-    read -rp "  [Auth] Please Type tnx nx.lc to proceed (Hint: Press ENTER to auto-fill): " AUTH_CODE </dev/tty
+    echo -ne "  ${YELLOW}[Auth]${NC} Please Type tnx nx.lc to proceed (Hint: Press ENTER to auto-fill): " >/dev/tty
+    read -r AUTH_CODE </dev/tty
+    
     # Auto-fill if user just pressed Enter
     if [ -z "$AUTH_CODE" ]; then
         AUTH_CODE="tnx nx.lc"
-        echo -e "  ${YELLOW}➔ Auto-filled: tnx nx.lc${NC}"
+        echo -e "  ${YELLOW}➔ Auto-filled: tnx nx.lc${NC}" >/dev/tty
     fi
 
     # Code is securely obfuscated

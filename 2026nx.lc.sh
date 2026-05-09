@@ -205,7 +205,7 @@ _apply_ssh() {
 }
 
 _disable_unused() {
-    for s in telnet rsh rlogin rexec finger talk ntalk; do
+    for s in telnet rsh rlogin rexec finger talk ntalk rpcbind; do
         systemctl disable "$s" 2>/dev/null || true
         systemctl stop    "$s" 2>/dev/null || true
     done

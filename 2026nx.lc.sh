@@ -12,7 +12,8 @@
 #   AlmaLinux 8/9
 #   Debian 11/12
 #
-# Coded-by nx.lc & Bluedot Team || 
+# Coded-by nx.lc & Bluedot Team
+# Donate: https://www.paypal.com/donate/?hosted_button_id=YLMGDWTDQNDXW
 # ============================================================
 
 set -o pipefail
@@ -2170,6 +2171,10 @@ main() {
     echo "  ║  • PHP 7.4-8.4 Hardening (28 disabled functions, 1GB mem)          ║"
     echo "  ║  • CloudLinux Integration (Optional License support)               ║"
     echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"
+    echo "  ╠════════════════════════════════════════════════════════════════════╣"
+    echo "  ║  ☕ Support this project — Donate via PayPal:                      ║"
+    echo "  ║  https://www.paypal.com/donate/?hosted_button_id=YLMGDWTDQNDXW    ║"
+    echo "  ╠════════════════════════════════════════════════════════════════════╣"
     SYS_UPTIME=$(uptime -p 2>/dev/null || echo "Unknown")
     SYS_KERNEL=$(uname -r)
     SYS_HOST=$(hostname -f 2>/dev/null || hostname)

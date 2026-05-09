@@ -40,6 +40,8 @@ touch "$LOGFILE"
 PL_CMQ="Pending"
 PL_CMC="Pending"
 PL_DNS="Pending"
+PL_CLN="Pending"
+PL_WMY="Pending"
 PL_SOFT="Pending"
 PL_WPT="Pending"
 PL_JB5="Pending"
@@ -69,6 +71,22 @@ ask_yn() {
             *) echo -e "${RED}  Type y or n${NC}" ;;
         esac
     done
+}
+
+ask_yn_timeout() {
+    local q="$1"
+    local timeout="$2"
+    echo -ne "\n${YELLOW}[?]${NC} ${BOLD}${q}${NC} (y/n, skips in ${timeout}s): "
+    local a
+    if read -t "$timeout" -r a </dev/tty; then
+        case "${a,,}" in
+            y|yes) return 0 ;;
+            *) return 1 ;;
+        esac
+    else
+        echo ""
+        return 1
+    fi
 }
 
 check_root() { [ "$EUID" -ne 0 ] && { log_error "Run as root!"; exit 1; }; }
@@ -467,8 +485,23 @@ _configure_csf() {
     log_section "CSF Firewall — Configure"
     [ ! -d /etc/csf ] && { log_warn "CSF not found"; return 1; }
 
-    # Core settings
     local CSF="/etc/csf/csf.conf"
+
+    if grep -q "$SSH_PORT" "$CSF" 2>/dev/null && [ -z "$CSF_RECONFIG_CHOICE" ]; then
+        log_ok "CSF Firewall — Configure Before"
+        if ! ask_yn_timeout "CSF Firewall already configured. Do you want to reconfigure it?" 30; then
+            log_warn "Skipped CSF Firewall configuration"
+            CSF_RECONFIG_CHOICE="skip"
+            return 0
+        else
+            CSF_RECONFIG_CHOICE="reconfig"
+        fi
+    elif [ "$CSF_RECONFIG_CHOICE" = "skip" ]; then
+        log_warn "Skipped CSF Firewall configuration"
+        return 0
+    fi
+
+    # Core settings
     declare -A CSF_SETTINGS=(
         [TESTING]="0" [ICMP_IN]="0" [IPV6]="0" [DENY_IP_LIMIT]="400"
         [SAFECHAINUPDATE]="1" [CC_DENY]="" [CC_IGNORE]="" [SMTP_BLOCK]="1"
@@ -655,6 +688,66 @@ check_install_dnscheck() {
     else
         log_error "Account DNS Check download failed."
         PL_DNS="Failed"
+    fi
+}
+
+check_install_cleanbackups() {
+    log_section "CleanBackups"
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi ]; then
+        log_ok "CleanBackups — Configure Before"
+        if ! ask_yn_timeout "CleanBackups already configured. Do you want to reconfigure it?" 30; then
+            log_warn "Skipped CleanBackups configuration"
+            PL_CLN="Installed (Pre-existing)"
+            return 0
+        fi
+    elif ! ask_yn "Enable CleanBackups?"; then 
+        log_warn "Skipped CleanBackups integration."
+        PL_CLN="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing CleanBackups..."
+    cd /usr/src || return 1
+    rm -f latest-cleanbackups
+    wget -q http://download.ndchost.com/cleanbackups/latest-cleanbackups
+    if [ -s latest-cleanbackups ]; then
+        sh latest-cleanbackups 2>/dev/null
+        log_ok "CleanBackups installed"
+        PL_CLN="Installed"
+        rm -f latest-cleanbackups
+    else
+        log_error "CleanBackups download failed."
+        PL_CLN="Failed"
+    fi
+}
+
+check_install_watchmysql() {
+    log_section "WatchMySQL"
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ]; then
+        log_ok "WatchMySQL — Configure Before"
+        if ! ask_yn_timeout "WatchMySQL already configured. Do you want to reconfigure it?" 30; then
+            log_warn "Skipped WatchMySQL configuration"
+            PL_WMY="Installed (Pre-existing)"
+            return 0
+        fi
+    elif ! ask_yn "Enable WatchMySQL?"; then 
+        log_warn "Skipped WatchMySQL integration."
+        PL_WMY="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing WatchMySQL..."
+    cd /usr/src || return 1
+    rm -f latest-watchmysql
+    wget -q http://download.ndchost.com/watchmysql/latest-watchmysql
+    if [ -s latest-watchmysql ]; then
+        sh latest-watchmysql 2>/dev/null
+        log_ok "WatchMySQL installed"
+        PL_WMY="Installed"
+        rm -f latest-watchmysql
+    else
+        log_error "WatchMySQL download failed."
+        PL_WMY="Failed"
     fi
 }
 
@@ -876,12 +969,13 @@ check_install_redis_memcached() {
 setup_telegram_alerts() {
     log_section "Capnel Security Alerts To Telegram"
     if [ -f /root/.telegram_installed ] || [ -f /usr/local/bin/telegram-alert ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php ]; then
-        log_ok "cPanel Security Alerts To Telegram already configured."
-        PL_TG="Installed (Pre-existing)"
-        return 0
-    fi
-
-    if ! ask_yn "Enable cPanel Security Alerts To Telegram?"; then 
+        log_ok "cPanel Security Alerts To Telegram — Configure Before"
+        if ! ask_yn_timeout "cPanel Security Alerts To Telegram already configured. Do you want to reconfigure it?" 30; then
+            log_warn "Skipped Telegram integration."
+            PL_TG="Installed (Pre-existing)"
+            return 0
+        fi
+    elif ! ask_yn "Enable cPanel Security Alerts To Telegram?"; then 
         log_warn "Skipped Telegram integration."
         PL_TG="Skipped"
         return 0
@@ -978,6 +1072,14 @@ check_install_cloudlinux() {
 # ═══════════════════════════════════════════
 install_ea4_php() {
     log_section "EA4 PHP 7.4–8.4 + Extensions"
+
+    if [ -f /var/cpanel/ApachePHPFPM/system_pool_defaults.yaml ] || [ -d /opt/cpanel/ea-php81 ]; then
+        log_ok "EA4 PHP 7.4–8.4 + Extensions — Configure Before"
+        if ! ask_yn_timeout "EA4 PHP already configured. Do you want to reconfigure it?" 30; then
+            log_warn "Skipped EA4 PHP configuration"
+            return 0
+        fi
+    fi
 
     # Install libsodium
     if echo "$OS" | grep -iq "ubuntu\|debian"; then
@@ -1402,6 +1504,8 @@ print_summary() {
     printf "  ║  %-12s : %-33s║\n" "CMQ"        "${PL_CMQ}"
     printf "  ║  %-12s : %-33s║\n" "CMC"        "${PL_CMC}"
     printf "  ║  %-12s : %-33s║\n" "DNS Check"  "${PL_DNS}"
+    printf "  ║  %-12s : %-33s║\n" "CleanBackups" "${PL_CLN}"
+    printf "  ║  %-12s : %-33s║\n" "WatchMySQL" "${PL_WMY}"
     printf "  ║  %-12s : %-33s║\n" "CloudLinux" "${PL_CL}"
     echo "  ╠══════════════════════════════════════════════════╣"
     echo "  ║  LICENSE STATUS                                  ║"
@@ -1443,6 +1547,8 @@ second_run() {
     check_install_cmq
     check_install_cmc
     check_install_dnscheck
+    check_install_cleanbackups
+    check_install_watchmysql
     check_install_softaculous
     check_install_wptoolkit
     check_install_jetbackup

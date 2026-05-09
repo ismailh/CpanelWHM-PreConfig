@@ -2070,15 +2070,16 @@ second_run() {
     check_licenses
     print_summary
 
-    if ask_yn "Something wrong? Or cPanel port not working? Flush iptables?"; then
-        log_info "Flushing iptables..."
+    if ask_yn "Something wrong? Or cPanel port not working? Flush Firewall ?"; then
+        log_info "Flushing iptables and CSF..."
         iptables -F 2>/dev/null || true
         iptables -X 2>/dev/null || true
         iptables -t nat -F 2>/dev/null || true
         iptables -t mangle -F 2>/dev/null || true
         ip6tables -F 2>/dev/null || true
         ip6tables -X 2>/dev/null || true
-        log_ok "Iptables flushed successfully!"
+        csf -f 2>/dev/null || true
+        log_ok "Firewall flushed successfully!"
     fi
 
     if ask_yn "Reboot now?"; then

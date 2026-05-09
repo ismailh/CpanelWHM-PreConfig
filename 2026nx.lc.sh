@@ -12,6 +12,7 @@
 #   AlmaLinux 8/9
 #   Debian 11/12
 #
+# Coded-by nx.lc & Bluedot Team || 
 # ============================================================
 
 set -o pipefail

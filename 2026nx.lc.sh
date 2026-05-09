@@ -38,13 +38,15 @@ touch "$LOGFILE"
 
 # Plugin Install Status Tracking
 PL_CMQ="Pending"
+PL_CMC="Pending"
 PL_DNS="Pending"
 PL_SOFT="Pending"
 PL_WPT="Pending"
 PL_JB5="Pending"
 PL_IMU="Pending"
 PL_LS="Pending"
-PL_CL="Pending"
+PL_CACHE="Pending"
+PL_TG="Pending"
 
 log_info()    { echo -e "${GREEN}[INFO]${NC}  $1"    | tee -a "$LOGFILE"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${NC}  $1"   | tee -a "$LOGFILE"; }
@@ -605,6 +607,30 @@ check_install_cmq() {
     if [ $SUCCESS -eq 0 ]; then
         log_error "CMQ download/install failed."
         PL_CMQ="Failed"
+    fi
+}
+
+check_install_cmc() {
+    log_section "ConfigServer ModSecurity Control (CMC)"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cmc.cgi ]; then
+        log_ok "CMC already installed"; PL_CMC="Installed (Pre-existing)"; return 0; fi
+    if ! ask_yn "Install ConfigServer ModSecurity Control (CMC)?"; then log_warn "Skipped"; PL_CMC="Skipped"; return 0; fi
+
+    log_info "Downloading and installing CMC..."
+    cd /usr/src || return 1
+    rm -f cmc.tgz
+    wget -qO cmc.tgz https://download.configserver.com/cmc.tgz
+    tar -xzf cmc.tgz
+    cd cmc || return 1
+    sh install.sh &>/dev/null
+    rm -Rfv /usr/src/cmc* &>/dev/null
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cmc.cgi ]; then
+        log_ok "CMC installed successfully"
+        PL_CMC="Installed"
+    else
+        log_error "CMC installation failed"
+        PL_CMC="Failed"
     fi
 }
 
@@ -1261,11 +1287,14 @@ print_summary() {
     echo "  ║  PLUGINS SUMMARY                                 ║"
     echo "  ╠══════════════════════════════════════════════════╣"
     printf "  ║  %-12s : %-33s║\n" "LiteSpeed"  "${PL_LS}"
+    printf "  ║  %-12s : %-33s║\n" "Redis/Memc." "${PL_CACHE}"
+    printf "  ║  %-12s : %-33s║\n" "Telegram Bot" "${PL_TG}"
     printf "  ║  %-12s : %-33s║\n" "Imunify360" "${PL_IMU}"
     printf "  ║  %-12s : %-33s║\n" "JetBackup"  "${PL_JB5}"
     printf "  ║  %-12s : %-33s║\n" "Softaculous" "${PL_SOFT}"
     printf "  ║  %-12s : %-33s║\n" "WP Toolkit" "${PL_WPT}"
     printf "  ║  %-12s : %-33s║\n" "CMQ"        "${PL_CMQ}"
+    printf "  ║  %-12s : %-33s║\n" "CMC"        "${PL_CMC}"
     printf "  ║  %-12s : %-33s║\n" "DNS Check"  "${PL_DNS}"
     printf "  ║  %-12s : %-33s║\n" "CloudLinux" "${PL_CL}"
     echo "  ╠══════════════════════════════════════════════════╣"
@@ -1300,19 +1329,22 @@ first_run() {
 }
 
 second_run() {
-    log_section "cPanel + Plugins + PHP + Config"
+    log_section "SECOND RUN — cPanel + Full Configuration"
     install_cpanel
     _install_csf
     _configure_csf
     configure_whm_tweaks
     check_install_cmq
+    check_install_cmc
     check_install_dns_check
     check_install_softaculous
     check_install_wptoolkit
     check_install_jetbackup
     check_install_imunify360
     check_install_litespeed
+    check_install_redis_memcached
     check_install_cloudlinux
+    setup_telegram_alerts
     install_ea4_php
     # Final CSF reconfiguration (pick up LiteSpeed/Imunify ports)
     _configure_csf
@@ -1362,6 +1394,7 @@ main() {
     echo "  ╚════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 
+
     # --- Authorization Check ---
     echo -ne "  ${YELLOW}[Auth]${NC} Please Type tnx nx.lc to proceed (Hint: Press ENTER to auto-fill): " >/dev/tty
     read -r AUTH_CODE </dev/tty
@@ -1390,7 +1423,22 @@ main() {
         echo -e "${GREEN}${BOLD}  ── This script has run before on your server. Now configuring next steps... ──${NC}\n"
         echo -ne "  ${YELLOW}Press ENTER to continue...${NC} " >/dev/tty
         read -r </dev/tty
-        echo ""
+        
+        echo -ne "  ${YELLOW}[Optional]${NC} Enable cPanel Security Alerts To Telegram? (y/n): " >/dev/tty
+        read -r TG_YESNO </dev/tty
+        if [ "$TG_YESNO" = "y" ] || [ "$TG_YESNO" = "Y" ]; then
+            echo -ne "  ${CYAN}➔ Enter Telegram Bot Token:${NC} " >/dev/tty
+            read -r TG_TOKEN </dev/tty
+            echo -ne "  ${CYAN}➔ Enter Telegram Chat ID:${NC} " >/dev/tty
+            read -r TG_CHATID </dev/tty
+            echo -e "  ${GREEN}[OK] Telegram alerts will be configured.${NC}\n"
+        else
+            echo -e "  ${YELLOW}➔ Skipped Telegram integration.${NC}\n"
+        fi
+        
+        export TG_TOKEN
+        export TG_CHATID
+        
         second_run
     fi
 

@@ -751,7 +751,7 @@ check_install_cmc() {
 
 check_install_dnscheck() {
     log_section "Account DNS Check"
-    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ]; then
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/addons/accountdnscheck/ ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_accountdnscheck.cgi ] || [ -d /var/cpanel/accountdnscheck ] || [ -n "$(find /usr/local/cpanel/whostmgr/docroot/cgi/ -maxdepth 2 -name '*accountdnscheck*' -print -quit 2>/dev/null)" ]; then
         log_ok "Account DNS Check — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "Account DNS Check already configured. What would you like to do?" 30
         local choice=$?
@@ -789,7 +789,7 @@ check_install_dnscheck() {
 
 check_install_cleanbackups() {
     log_section "CleanBackups"
-    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi ]; then
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi ] || [ -d /var/cpanel/cleanbackups ] || [ -n "$(find /usr/local/cpanel/whostmgr/docroot/cgi/ -maxdepth 1 -name '*cleanbackups*' -print -quit 2>/dev/null)" ]; then
         log_ok "CleanBackups — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "CleanBackups already configured. What would you like to do?" 30
         local choice=$?
@@ -827,7 +827,7 @@ check_install_cleanbackups() {
 
 check_install_watchmysql() {
     log_section "WatchMySQL"
-    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ]; then
+    if [ -d /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql ] || [ -f /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi ] || [ -d /var/cpanel/watchmysql ] || [ -n "$(find /usr/local/cpanel/whostmgr/docroot/cgi/ -maxdepth 1 -name '*watchmysql*' -print -quit 2>/dev/null)" ]; then
         log_ok "WatchMySQL — Configure / Installed Before"
         ask_reconfig_uninstall_timeout "WatchMySQL already configured. What would you like to do?" 30
         local choice=$?

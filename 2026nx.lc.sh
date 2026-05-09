@@ -2026,23 +2026,6 @@ print_summary() {
     [ "$LIC_IMU" != "Not Installed" ]  && printf "  ║  %-12s : %-33s║\n" "Imunify360"  "${LIC_IMU}"
     echo "  ╚══════════════════════════════════════════════════╝"
     echo -e "${NC}"
-    
-    if ask_yn "Something wrong? Or cPanel port not working? Flush iptables?"; then
-        log_info "Flushing iptables..."
-        iptables -F 2>/dev/null || true
-        iptables -X 2>/dev/null || true
-        iptables -t nat -F 2>/dev/null || true
-        iptables -t mangle -F 2>/dev/null || true
-        ip6tables -F 2>/dev/null || true
-        ip6tables -X 2>/dev/null || true
-        log_ok "Iptables flushed successfully!"
-    fi
-
-    if ask_yn "Reboot now?"; then
-        log_info "Rebooting in 10 seconds..."; sleep 10; reboot
-    else
-        log_warn "Please reboot manually: shutdown -r now"
-    fi
 }
 
 # ═══════════════════════════════════════════
@@ -2086,6 +2069,23 @@ second_run() {
     _configure_csf
     check_licenses
     print_summary
+
+    if ask_yn "Something wrong? Or cPanel port not working? Flush iptables?"; then
+        log_info "Flushing iptables..."
+        iptables -F 2>/dev/null || true
+        iptables -X 2>/dev/null || true
+        iptables -t nat -F 2>/dev/null || true
+        iptables -t mangle -F 2>/dev/null || true
+        ip6tables -F 2>/dev/null || true
+        ip6tables -X 2>/dev/null || true
+        log_ok "Iptables flushed successfully!"
+    fi
+
+    if ask_yn "Reboot now?"; then
+        log_info "Rebooting in 10 seconds..."; sleep 10; reboot
+    else
+        log_warn "Please reboot manually: shutdown -r now"
+    fi
 }
 
 # ═══════════════════════════════════════════

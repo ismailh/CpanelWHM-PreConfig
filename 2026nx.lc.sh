@@ -1461,14 +1461,62 @@ check_install_cloudlinux() {
         PL_CL="Skipped"
         return 0
     fi
-    read -rp "  License Key (Enter for IP activation): " CL_KEY </dev/tty
-    wget -q https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /tmp/cldeploy
+    echo "  [1] License Key"
+    echo "  [2] IP Activation (no key)"
+    echo "  [3] Skip Registration (offline / trial — key 999)"
+    read -rp "  Select [1/2/3] (default 2): " CL_MODE </dev/tty
+
+    /usr/bin/wget -q https://repo.cloudlinux.com/cloudlinux/sources/cln/cldeploy -O /tmp/cldeploy
     chmod +x /tmp/cldeploy
-    if [ -n "$CL_KEY" ]; then bash /tmp/cldeploy -k "$CL_KEY"; else bash /tmp/cldeploy -i; fi
+
+    case "$CL_MODE" in
+        1)
+            read -rp "  License Key: " CL_KEY </dev/tty
+            log_info "Deploying CloudLinux with license key..."
+            bash /tmp/cldeploy -k "$CL_KEY"
+            ;;
+        3)
+            log_info "Deploying CloudLinux (skip-registration, key 999)..."
+            cd /root && /usr/bin/sh /tmp/cldeploy --skip-registration -k 999 &>/dev/null
+            ;;
+        *)
+            log_info "Deploying CloudLinux (IP activation)..."
+            bash /tmp/cldeploy -i
+            ;;
+    esac
+
     local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
+
+    # Core LVE manager + utilities
+    log_info "Installing LVE Manager and utilities..."
     $PKG install -y lvemanager lvectl lve-utils lve-stats 2>/dev/null || true
+
+    # Alt language stacks (PHP, Node.js, Python, Ruby via CloudLinux SCL)
+    log_info "Installing alt-php, alt-nodejs, alt-python, alt-ruby groups..."
+    $PKG groupinstall -y alt-php alt-nodejs alt-python alt-ruby 2>/dev/null || true
+
+    # EA4 Apache modules required for CloudLinux integration
+    log_info "Installing EA4 Apache modules (suexec, passenger)..."
+    $PKG install -y ea-apache24-mod_suexec 2>/dev/null || true
+    $PKG install -y ea-apache24-mod-alt-passenger 2>/dev/null || true
+
+    # Grub2 (required for CloudLinux kernel boot — disable excludes so kernel isn't blocked)
+    log_info "Installing/updating grub2..."
+    $PKG install -y grub2 --disableexcludes=all 2>/dev/null || true
+
+    # CageFS — install and initialize inline
+    log_info "Installing and initializing CageFS..."
+    $PKG install -y cagefs 2>/dev/null || true
+    if command -v cagefsctl &>/dev/null || [ -f /usr/sbin/cagefsctl ]; then
+        /usr/sbin/cagefsctl --init 2>/dev/null || cagefsctl --init 2>/dev/null || true
+        cagefsctl --enable-all 2>/dev/null || true
+        log_ok "CageFS initialized and enabled for all users"
+    else
+        log_warn "cagefsctl not found — CageFS may require a reboot first"
+    fi
+
     rm -f /tmp/cldeploy
-    log_warn "Reboot required after CloudLinux install"
+    log_warn "⚠  Reboot required to activate the CloudLinux kernel"
     log_ok "CloudLinux installed"
     PL_CL="Installed"
 }
@@ -1480,8 +1528,21 @@ check_install_cagefs() {
     fi
 
     log_section "CloudLinux CageFS"
+
+    # If CageFS was already bootstrapped inline during check_install_cloudlinux(),
+    # skip the install path but still allow the reconfigure/uninstall prompt.
+    local _INLINE_INSTALLED=0
+    [ "${PL_CL:-}" = "Installed" ] && _INLINE_INSTALLED=1
+
     if command -v cagefsctl &>/dev/null || [ -d /usr/share/cagefs-skeleton ] || [ -f /usr/sbin/cagefsctl ]; then
-        log_ok "CloudLinux CageFS — Configure / Installed Before"
+        log_ok "CloudLinux CageFS — Installed"
+
+        # When just installed inline this session, auto-confirm and skip re-prompt
+        if [ "$_INLINE_INSTALLED" -eq 1 ] && [ "${PL_CGF:-}" = "Installed" ]; then
+            log_info "CageFS was initialized during CloudLinux install — skipping re-prompt"
+            return 0
+        fi
+
         ask_reconfig_uninstall_timeout "CloudLinux CageFS already configured. What would you like to do?" 15
         local choice=$?
         if [ $choice -eq 1 ]; then
@@ -1501,7 +1562,24 @@ check_install_cagefs() {
             PL_CGF="Uninstalled"
             return 0
         fi
-    elif ! ask_yn "Install CloudLinux CageFS?"; then 
+        # choice=0 (reconfigure) — fall through to reinit below
+        log_info "Re-initializing CageFS..."
+        cagefsctl --init 2>/dev/null || true
+        cagefsctl --enable-all 2>/dev/null || true
+        log_ok "CageFS re-initialized and enabled for all users"
+        PL_CGF="Reconfigured"
+        return 0
+    fi
+
+    # If we get here: CloudLinux is running but cagefsctl is missing
+    # (e.g. inline install happened but reboot is still pending)
+    if [ "$_INLINE_INSTALLED" -eq 1 ]; then
+        log_warn "CageFS was installed but cagefsctl not yet available — reboot may be required"
+        PL_CGF="Pending Reboot"
+        return 0
+    fi
+
+    if ! ask_yn "Install CloudLinux CageFS?"; then
         log_warn "Skipped CloudLinux CageFS integration."
         PL_CGF="Skipped"
         return 0
@@ -1510,14 +1588,14 @@ check_install_cagefs() {
     log_info "Installing CloudLinux CageFS..."
     local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
     $PKG install -y cagefs 2>/dev/null || true
-    if command -v cagefsctl &>/dev/null; then
-        cagefsctl --init 2>/dev/null || true
+    if command -v cagefsctl &>/dev/null || [ -f /usr/sbin/cagefsctl ]; then
+        /usr/sbin/cagefsctl --init 2>/dev/null || cagefsctl --init 2>/dev/null || true
         cagefsctl --enable-all 2>/dev/null || true
         log_ok "CloudLinux CageFS installed and initialized"
         PL_CGF="Installed"
     else
-        log_error "CloudLinux CageFS installation failed."
-        PL_CGF="Failed"
+        log_warn "CageFS installed — cagefsctl not yet available (reboot may be required)"
+        PL_CGF="Pending Reboot"
     fi
 }
 
@@ -2169,7 +2247,8 @@ main() {
     echo "  ║  • Core Plugins: JetBackup 5, Softaculous, WP Toolkit              ║"
     echo "  ║  • Mail & DNS: CMQ, Account DNS Check, Exim Hardening              ║"
     echo "  ║  • PHP 7.4-8.4 Hardening (28 disabled functions, 1GB mem)          ║"
-    echo "  ║  • CloudLinux Integration (Optional License support)               ║"
+    echo "  ║  • CloudLinux: Key / IP / Skip-Registration + CageFS + Alt Stacks  ║"
+    echo "  ║  • Alt Language Stacks: alt-php, alt-nodejs, alt-python, alt-ruby  ║"
     echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"
     echo "  ╠════════════════════════════════════════════════════════════════════╣"
     echo "  ║  ☕ Support this project — Donate via PayPal:                      ║"

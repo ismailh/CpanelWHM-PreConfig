@@ -49,6 +49,8 @@ PL_IMU="Pending"
 PL_LS="Pending"
 PL_CACHE="Pending"
 PL_TG="Pending"
+PL_CGF="Pending"
+PL_MB="Pending"
 
 log_info()    { echo -e "${GREEN}[INFO]${NC}  $1"    | tee -a "$LOGFILE"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${NC}  $1"   | tee -a "$LOGFILE"; }
@@ -867,6 +869,161 @@ check_install_watchmysql() {
     fi
 }
 
+check_install_mailbaby() {
+    log_section "MailBaby Smarthost"
+    if grep -q "mailbaby_smtp" /etc/exim.conf.local 2>/dev/null; then
+        log_ok "MailBaby — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "MailBaby already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped MailBaby configuration"
+            PL_MB="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling MailBaby (Reverting Exim Config)..."
+            cp /etc/exim.conf.local /etc/exim.conf.local.bak_mailbaby 2>/dev/null || true
+            echo "@CONFIG@" > /etc/exim.conf.local
+            echo "message_size_limit = 50M" >> /etc/exim.conf.local
+            /scripts/buildeximconf 2>/dev/null || true
+            service exim restart 2>/dev/null || true
+            log_ok "MailBaby Uninstalled and Exim reverted to default"
+            PL_MB="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install and configure MailBaby Smarthost?"; then 
+        log_warn "Skipped MailBaby integration."
+        PL_MB="Skipped"
+        return 0
+    fi
+
+    echo -ne "  ${CYAN}➔ Enter MailBaby Username:${NC} " >/dev/tty
+    read -r MB_USER </dev/tty
+    echo -ne "  ${CYAN}➔ Enter MailBaby Password:${NC} " >/dev/tty
+    read -rs MB_PASS </dev/tty
+    echo "" >/dev/tty
+
+    if [ -z "$MB_USER" ] || [ -z "$MB_PASS" ]; then
+        log_error "Skipped (No credentials provided)"
+        PL_MB="Failed"
+        return 0
+    fi
+
+    log_info "Configuring MailBaby in Exim..."
+    cp /etc/exim.conf.local /etc/exim.conf.local.bak_pre_mailbaby 2>/dev/null || true
+
+    cat > /etc/exim.conf.local << EOF
+%RETRYBLOCK%
++secondarymx * F,4h,5m; G,16h,1h,1.5; F,4d,8h
+* * F,2h,15m; G,16h,1h,1.5; F,4d,8h
+* auth_failed
+
+@AUTH@
+mailbaby_login:
+driver = plaintext
+public_name = LOGIN
+client_send = : $MB_USER : $MB_PASS
+
+@BEGINACL@
+
+@CONFIG@
+chunking_advertise_hosts = ""
+local_from_check = true
+message_size_limit = 50M
+ignore_bounce_errors_after = 1h
+timeout_frozen_after = 12h
+
+@DIRECTOREND@
+
+@DIRECTORMIDDLE@
+
+@DIRECTORSTART@
+
+@ENDACL@
+
+@POSTMAILCOUNT@
+remoteserver_route:
+driver = manualroute
+.ifdef SRSENABLED
+transport = \${if eq {\$local_part@\$domain} {\$original_local_part@\$original_domain} {mailbaby_smtp} {mailbaby_forward_smtp}}
+.else
+transport = mailbaby_smtp
+.endif
+domains = !+local_domains
+ignore_target_hosts = 127.0.0.0/8
+route_list = * relay.mailbaby.net::25 randomize byname
+host_find_failed = defer
+no_more
+
+@PREDOTFORWARD@
+
+@PREFILTER@
+
+@PRELOCALUSER@
+
+@PRENOALIASDISCARD@
+
+@PREROUTERS@
+
+@PREVALIASNOSTAR@
+
+@PREVALIASSTAR@
+
+@PREVIRTUALUSER@
+
+@RETRYEND@
+
+@RETRYSTART@
+* data_4xx F,4h,1m
+* rcpt_4xx F,4h,1m
+* timeout F,4h,1m
+* refused F,1h,5m
+* lost_connection F,1h,1m
+* * F,6h,5m
+
+@REWRITE@
+
+@ROUTEREND@
+
+@ROUTERMIDDLE@
+
+@ROUTERSTART@
+
+@TRANSPORTEND@
+
+@TRANSPORTMIDDLE@
+
+@TRANSPORTSTART@
+mailbaby_smtp:
+  driver = smtp
+  hosts_require_auth = *
+  tls_tempfail_tryclear = true
+  headers_add = X-AuthUser: \${if match {\$authenticated_id}{.*@.*} {\$authenticated_id} {\${if match {\$authenticated_id}{.+} {\$authenticated_id@\${primary_hostname}} {\$authenticated_id}}}}
+  dkim_domain = \${lookup{\$sender_address_domain}lsearch{ret=key{/etc/localdomains}}}
+  dkim_selector = default
+  dkim_canon = relaxed
+  dkim_private_key = "/var/cpanel/domain_keys/private/\${dkim_domain}"
+  message_linelength_limit = 65536
+
+mailbaby_forward_smtp:
+  driver = smtp
+  hosts_require_auth = *
+  tls_tempfail_tryclear = true
+  headers_add = X-AuthUser: \${if match {\$authenticated_id}{.*@.*} {\$authenticated_id} {\${if match {\$authenticated_id}{.+} {\$authenticated_id@\${primary_hostname}} {\$authenticated_id}}}}
+  dkim_domain = \${lookup{\$sender_address_domain}lsearch{ret=key{/etc/localdomains}}}
+  dkim_selector = default
+  dkim_canon = relaxed
+  dkim_private_key = "/var/cpanel/domain_keys/private/\${dkim_domain}"
+  message_linelength_limit = 65536
+  .ifdef SRSENABLED
+  return_path = \${srs_encode {SRS_SECRET} {\$return_path} {\$original_domain}}
+  .endif
+EOF
+
+    /scripts/buildeximconf 2>/dev/null || true
+    service exim restart 2>/dev/null || true
+    log_ok "MailBaby installed and Exim restarted"
+    PL_MB="Installed"
+}
 
 check_install_softaculous() {
     log_section "Softaculous"
@@ -1305,13 +1462,87 @@ check_install_cloudlinux() {
     chmod +x /tmp/cldeploy
     if [ -n "$CL_KEY" ]; then bash /tmp/cldeploy -k "$CL_KEY"; else bash /tmp/cldeploy -i; fi
     local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
-    $PKG install -y lvemanager lvectl lve-utils lve-stats cagefs 2>/dev/null || true
-    cagefsctl --init 2>/dev/null || true
-    cagefsctl --enable-all 2>/dev/null || true
+    $PKG install -y lvemanager lvectl lve-utils lve-stats 2>/dev/null || true
     rm -f /tmp/cldeploy
     log_warn "Reboot required after CloudLinux install"
     log_ok "CloudLinux installed"
     PL_CL="Installed"
+}
+
+check_install_cagefs() {
+    if ! grep -qi "cloudlinux" /etc/os-release 2>/dev/null; then
+        PL_CGF="Skipped (No CloudLinux)"
+        return 0
+    fi
+
+    log_section "CloudLinux CageFS"
+    if command -v cagefsctl &>/dev/null || [ -d /usr/share/cagefs-skeleton ] || [ -f /usr/sbin/cagefsctl ]; then
+        log_ok "CloudLinux CageFS — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "CloudLinux CageFS already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped CloudLinux CageFS configuration"
+            PL_CGF="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling CloudLinux CageFS..."
+            if command -v cagefsctl &>/dev/null; then
+                cagefsctl --disable-all 2>/dev/null || true
+                cagefsctl --unmount-all 2>/dev/null || true
+            fi
+            local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
+            $PKG remove -y cagefs cagefs-safebin 2>/dev/null || true
+            rm -rf /usr/share/cagefs-skeleton 2>/dev/null || true
+            log_ok "CloudLinux CageFS Uninstalled"
+            PL_CGF="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install CloudLinux CageFS?"; then 
+        log_warn "Skipped CloudLinux CageFS integration."
+        PL_CGF="Skipped"
+        return 0
+    fi
+
+    log_info "Installing CloudLinux CageFS..."
+    local PKG="yum"; command -v dnf &>/dev/null && PKG="dnf"
+    $PKG install -y cagefs 2>/dev/null || true
+    if command -v cagefsctl &>/dev/null; then
+        cagefsctl --init 2>/dev/null || true
+        cagefsctl --enable-all 2>/dev/null || true
+        log_ok "CloudLinux CageFS installed and initialized"
+        PL_CGF="Installed"
+    else
+        log_error "CloudLinux CageFS installation failed."
+        PL_CGF="Failed"
+    fi
+}
+
+configure_cloudlinux_symlink() {
+    if ! grep -qi "cloudlinux" /etc/os-release 2>/dev/null; then
+        return 0
+    fi
+    log_info "Configuring CloudLinux Symlink Protection..."
+    
+    local NOBODY_GID=99
+    if id nobody &>/dev/null; then
+        NOBODY_GID=$(id -g nobody)
+    fi
+    
+    mkdir -p /etc/sysctl.d
+    cat > /etc/sysctl.d/90-cloudlinux.conf << EOF
+fs.enforce_symlinksifowner = 1
+fs.symlinkown_gid = $NOBODY_GID
+EOF
+    sysctl -p /etc/sysctl.d/90-cloudlinux.conf 2>/dev/null || true
+    
+    # Enforce in /etc/sysctl.conf
+    sed -i '/fs.enforce_symlinksifowner/d' /etc/sysctl.conf 2>/dev/null || true
+    sed -i '/fs.symlinkown_gid/d' /etc/sysctl.conf 2>/dev/null || true
+    echo "fs.enforce_symlinksifowner = 1" >> /etc/sysctl.conf
+    echo "fs.symlinkown_gid = $NOBODY_GID" >> /etc/sysctl.conf
+    sysctl -p 2>/dev/null || true
+    
+    log_ok "CloudLinux Symlink Protection configured (GID: $NOBODY_GID)"
 }
 
 
@@ -1778,7 +2009,9 @@ print_summary() {
     printf "  ║  %-12s : %-33s║\n" "DNS Check"  "${PL_DNS}"
     printf "  ║  %-12s : %-33s║\n" "CleanBackups" "${PL_CLN}"
     printf "  ║  %-12s : %-33s║\n" "WatchMySQL" "${PL_WMY}"
+    printf "  ║  %-12s : %-33s║\n" "MailBaby"   "${PL_MB}"
     printf "  ║  %-12s : %-33s║\n" "CloudLinux" "${PL_CL}"
+    printf "  ║  %-12s : %-33s║\n" "CageFS"     "${PL_CGF}"
     echo "  ╠══════════════════════════════════════════════════╣"
     echo "  ║  LICENSE STATUS                                  ║"
     echo "  ╠══════════════════════════════════════════════════╣"
@@ -1822,12 +2055,15 @@ second_run() {
     check_install_dnscheck
     check_install_cleanbackups
     check_install_watchmysql
+    check_install_mailbaby
     check_install_softaculous
     check_install_wptoolkit
     check_install_jetbackup
     check_install_imunify360
     check_install_litespeed
     check_install_cloudlinux
+    check_install_cagefs
+    configure_cloudlinux_symlink
     install_ea4_php
     check_install_redis_memcached
     setup_telegram_alerts

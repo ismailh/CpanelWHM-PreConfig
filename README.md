@@ -106,3 +106,13 @@ If you encounter any issues or need further customization, please contact:
 **Email:** ismail@bluedot.ltd  
 **Website:** [https://me.ismail.info/](https://me.ismail.info/)
 **Website:** [https://nx.lc/](https://nx.lc/)
+
+---
+
+## ☕ Donate
+
+If this project saved you time, consider supporting the development:
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/donate/?hosted_button_id=YLMGDWTDQNDXW)
+
+👉 **[Donate via PayPal](https://www.paypal.com/donate/?hosted_button_id=YLMGDWTDQNDXW)**

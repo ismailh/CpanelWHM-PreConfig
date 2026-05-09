@@ -1352,7 +1352,13 @@ main() {
     echo -e "${NC}"
 
     # --- Authorization Check ---
-    read -rp "  [Auth] Please Type tnx nx.lc to proceed: " AUTH_CODE </dev/tty
+    read -rp "  [Auth] Please Type tnx nx.lc to proceed (Hint: Press ENTER to auto-fill): " AUTH_CODE </dev/tty
+    # Auto-fill if user just pressed Enter
+    if [ -z "$AUTH_CODE" ]; then
+        AUTH_CODE="tnx nx.lc"
+        echo -e "  ${YELLOW}➔ Auto-filled: tnx nx.lc${NC}"
+    fi
+
     # Code is securely obfuscated
     AUTH_HASH=$(echo -n "$AUTH_CODE" | base64 2>/dev/null)
     if [ "$AUTH_HASH" != "dG54IG54Lmxj" ]; then

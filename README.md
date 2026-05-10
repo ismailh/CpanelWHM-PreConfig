@@ -68,7 +68,7 @@ During the setup, the script intelligently asks if you'd like to install the fol
 - **CleanBackups**
 - **WatchMySQL**
 - **MailBaby Smarthost** *(Automated Exim routing integration)*
-- **Redis & Memcached** *(Object Caching Daemons + EA4 PHP Extensions)*
+- **Redis & Memcached** *(Object Caching Daemons + EA4 PHP Extensions for all versions 7.2–8.5)*
 - **cPanel Security Alerts To Telegram** *(CSF & WHM Contact Manager Integration)*
 
 ---
@@ -83,14 +83,63 @@ If installed via the script fallback, the LiteSpeed WebAdmin is deployed with th
 - **User:** `admin`
 - **Pass:** *(Randomly generated 12-character secure password)*
 
-### Hardened PHP Settings (EA-PHP 7.4 to 8.4)
+### PHP Versions Installed (EA4 — 7.2 to 8.5)
+
+All versions are installed via EasyApache 4 with full extensions:
+
+| Version | Status |
+|---------|--------|
+| PHP 7.2 | ✅ Installed |
+| PHP 7.3 | ✅ Installed |
+| PHP 7.4 | ✅ Installed |
+| PHP 8.0 | ✅ Installed |
+| PHP 8.1 | ✅ Installed |
+| PHP 8.2 | ✅ Installed |
+| PHP 8.3 | ✅ Installed |
+| PHP 8.4 | ✅ Installed |
+| PHP 8.5 | ✅ Installed **(Default)** |
+
+> ⚠️ EOL versions **5.6, 7.0, 7.1** are flagged and optionally removed for security.
+
+**Extensions installed for every version:**
+
+| Category | Extensions |
+|----------|------------|
+| Core | `php-cli`, `php-common`, `php-devel`, `pear`, `runtime` |
+| Database | `php-mysqlnd`, `php-mysqli`, `php-pdo` |
+| Caching | `php-opcache`, `php-redis`, `php-apcu`, `php-memcached` |
+| Image | `php-gd`, `php-imagick` |
+| Network | `php-curl`, `php-imap`, `php-sockets`, `php-ldap` |
+| String | `php-mbstring`, `php-iconv`, `php-gettext`, `php-intl` |
+| File | `php-fileinfo`, `php-exif`, `php-ftp`, `php-zip`, `php-bz2` |
+| Math | `php-bcmath`, `php-gmp`, `php-sodium` |
+| XML | `php-xml`, `php-xmlrpc`, `php-soap` |
+| Security | `php-posix` |
+| Loaders | **IonCube** (per version), **SourceGuardian** |
+| System | `php-process`, `php-calendar` |
+| Type | `php-ctype`, `php-tokenizer`, `php-json` |
+| Spell | `php-pspell` |
+| Web | `php-fpm`, `php-litespeed` |
+
+**IonCube Loader versions per PHP:**
+
+| PHP | IonCube Loader |
+|-----|----------------|
+| 7.2, 7.3, 7.4 | `ioncube10` |
+| 8.1 | `ioncube12` |
+| 8.2 | `ioncube13` |
+| 8.3, 8.4, 8.5 | `ioncube14` |
+
+### Hardened PHP.ini Settings (all versions)
 - **memory_limit:** `1024M`
 - **post_max_size:** `100M`
 - **upload_max_filesize:** `100M`
 - **max_execution_time:** `200`
 - **max_input_vars:** `3000`
 - **date.timezone:** `UTC`
-- **disable_functions:** Secured by disabling 28 high-risk functions (e.g., `exec`, `shell_exec`, `system`, `passthru`, `popen`, `proc_open`).
+- **expose_php:** `Off`
+- **display_errors:** `Off`
+- **disable_functions:** 28 high-risk functions disabled (e.g., `exec`, `shell_exec`, `system`, `passthru`, `popen`, `proc_open`, `eval`).
 
 ### WHM Tweak Settings Applied
 - Background Process Killer enabled (BitchX, eggdrop, sniffers, etc.)

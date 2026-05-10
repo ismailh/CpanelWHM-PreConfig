@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # WHM/cPanel all Improtent Plugin Installation Setup Script and preconfiger 
-# Version: 3.0.0
+# Version: 4.0.0
 # All messages in English
 # SSH Port: 1337
 #
@@ -1629,13 +1629,13 @@ EOF
 
 
 # ═══════════════════════════════════════════
-# EA4 PHP 7.4–8.4 + ALL EXTENSIONS
+# EA4 PHP 7.2–8.5 + ALL EXTENSIONS
 # ═══════════════════════════════════════════
 install_ea4_php() {
-    log_section "EA4 PHP 7.4–8.4 + Extensions"
+    log_section "EA4 PHP 7.2–8.5 + Extensions"
 
     if [ -f /var/cpanel/ApachePHPFPM/system_pool_defaults.yaml ] || [ -d /opt/cpanel/ea-php81 ]; then
-        log_ok "EA4 PHP 7.4–8.4 + Extensions — Configure / Installed Before"
+        log_ok "EA4 PHP 7.2–8.5 + Extensions — Configure / Installed Before"
         if ! ask_yn_timeout "EA4 PHP already configured. Do you want to reconfigure it?" 30; then
             log_warn "Skipped EA4 PHP configuration"
             return 0
@@ -1643,7 +1643,8 @@ install_ea4_php() {
     fi
 
     # ── Detect and remove deprecated/EOL PHP versions ──
-    local EOL_PHP_VERSIONS="56 70 71 72 73"
+    # Note: 7.2 and 7.3 are now target versions — only 5.6, 7.0, 7.1 are EOL here
+    local EOL_PHP_VERSIONS="56 70 71"
     local EOL_FOUND=""
     for EV in $EOL_PHP_VERSIONS; do
         if [ -d "/opt/cpanel/ea-php${EV}" ]; then
@@ -1694,15 +1695,16 @@ install_ea4_php() {
         $PKG install -y libsodium libsodium-devel 2>/dev/null || true
     fi
 
-    # PHP versions to install
-    local PHP_VERS="74 80 81 82 83 84"
+    # PHP versions to install (7.2–8.5)
+    local PHP_VERS="72 73 74 80 81 82 83 84 85"
 
-    # Extensions per version
+    # Extensions per version — full set
     local EXTS="pear php-cli php-common php-curl php-devel php-exif php-fileinfo \
 php-ftp php-gd php-iconv php-intl php-litespeed php-mbstring php-mysqlnd \
-php-opcache php-pdo php-posix php-soap php-zip runtime php-bcmath \
+php-mysqli php-opcache php-pdo php-posix php-soap php-zip runtime php-bcmath \
 php-gettext php-gmp php-xml php-imap php-sodium php-calendar \
-php-fpm php-ldap php-xmlrpc php-sockets"
+php-fpm php-ldap php-xmlrpc php-sockets php-imagick \
+php-ctype php-tokenizer php-bz2 php-pspell php-process php-json"
 
     local INSTALL_LIST=""
     for V in $PHP_VERS; do
@@ -1713,8 +1715,10 @@ php-fpm php-ldap php-xmlrpc php-sockets"
     done
 
     # IonCube per version
+    INSTALL_LIST="$INSTALL_LIST ea-php72-php-ioncube10 ea-php73-php-ioncube10"
     INSTALL_LIST="$INSTALL_LIST ea-php74-php-ioncube10 ea-php81-php-ioncube12"
     INSTALL_LIST="$INSTALL_LIST ea-php82-php-ioncube13 ea-php83-php-ioncube14"
+    INSTALL_LIST="$INSTALL_LIST ea-php84-php-ioncube14 ea-php85-php-ioncube14"
 
     # Apache modules
     INSTALL_LIST="$INSTALL_LIST ea-apache24-mod_proxy_fcgi ea-apache24-mod_version ea-apache24-mod_env"
@@ -1818,13 +1822,13 @@ EOF
     /scripts/restartsrv_apache_php_fpm 2>/dev/null || true
 
     # Set handlers and default PHP version
-    for V in 74 80 81 82 83 84; do
+    for V in 72 73 74 80 81 82 83 84 85; do
         whmapi1 php_set_handler version=ea-php${V} handler=cgi 2>/dev/null || true
     done
-    whmapi1 php_set_system_default_version version=ea-php84 2>/dev/null || true
+    whmapi1 php_set_system_default_version version=ea-php85 2>/dev/null || true
     whmapi1 php_set_default_accounts_to_fpm default_accounts_to_fpm=1 2>/dev/null || true
 
-    log_ok "EA4 PHP 7.4–8.4 installed with all extensions"
+    log_ok "EA4 PHP 7.2–8.5 installed with all extensions (mysqlnd, mysqli, imagick, ioncube, imap, redis, ctype, tokenizer, bz2, pspell, process, json, posix, and more)"
 }
 
 # ═══════════════════════════════════════════
@@ -2246,7 +2250,7 @@ main() {
     echo "  ║  • Performance: LiteSpeed Auto-Installer (TRIAL/PRO)               ║"
     echo "  ║  • Core Plugins: JetBackup 5, Softaculous, WP Toolkit              ║"
     echo "  ║  • Mail & DNS: CMQ, Account DNS Check, Exim Hardening              ║"
-    echo "  ║  • PHP 7.4-8.4 Hardening (28 disabled functions, 1GB mem)          ║"
+    echo "  ║  • PHP 7.2-8.4 + All Extensions (imagick, redis, ioncube, imap...)   ║"
     echo "  ║  • CloudLinux: Key / IP / Skip-Registration + CageFS + Alt Stacks  ║"
     echo "  ║  • Alt Language Stacks: alt-php, alt-nodejs, alt-python, alt-ruby  ║"
     echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"

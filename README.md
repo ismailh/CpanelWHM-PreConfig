@@ -1,4 +1,4 @@
-# Cpanel & WHM-PreConfig v4.0
+# Cpanel & WHM-PreConfig v5.0
 
 Automated, robust, and highly secure deployment script to install and configure cPanel/WHM along with essential server plugins like LiteSpeed, CloudLinux, and JetBackup 5. Designed to save significant time and ensure standard security baselines when provisioning new cPanel production servers.
 

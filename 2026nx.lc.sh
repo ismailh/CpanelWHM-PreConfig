@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-# WHM/cPanel all Improtent Plugin Installation Setup Script and preconfiger 
-# Version: 4.0.0
+# WHM/cPanel All Important Plugin Installation Setup Script and Preconfiguration
+# Version: 5.0.0
 # All messages in English
 # SSH Port: 1337
 #
@@ -52,6 +52,7 @@ PL_CACHE="Pending"
 PL_TG="Pending"
 PL_CGF="Pending"
 PL_MB="Pending"
+PL_CL="Pending"
 
 log_info()    { echo -e "${GREEN}[INFO]${NC}  $1"    | tee -a "$LOGFILE"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${NC}  $1"   | tee -a "$LOGFILE"; }
@@ -342,9 +343,6 @@ run_os_config() {
     else log_warn "Unknown OS: $OS — using RHEL defaults";  run_rhel
     fi
 }
-
-# All functions are embedded below in this single file
-
 
 # ═══════════════════════════════════════════
 # cPANEL INSTALL
@@ -1425,7 +1423,7 @@ EOF
     chmod 755 /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php
     
     # Send completion alert
-    /usr/local/bin/telegram-alert "✅ WHM/cPanel Deployment v3.0 Successfully Completed on IP: $PUBLIC_IP"
+    /usr/local/bin/telegram-alert "✅ WHM/cPanel Deployment v5.0 Successfully Completed on IP: $PUBLIC_IP"
     
     log_ok "Telegram Security Alerts Configured!"
     touch /root/.telegram_installed
@@ -1615,15 +1613,8 @@ configure_cloudlinux_symlink() {
 fs.enforce_symlinksifowner = 1
 fs.symlinkown_gid = $NOBODY_GID
 EOF
-    sysctl -p /etc/sysctl.d/90-cloudlinux.conf 2>/dev/null || true
-    
-    # Enforce in /etc/sysctl.conf
-    sed -i '/fs.enforce_symlinksifowner/d' /etc/sysctl.conf 2>/dev/null || true
-    sed -i '/fs.symlinkown_gid/d' /etc/sysctl.conf 2>/dev/null || true
-    echo "fs.enforce_symlinksifowner = 1" >> /etc/sysctl.conf
-    echo "fs.symlinkown_gid = $NOBODY_GID" >> /etc/sysctl.conf
-    sysctl -p 2>/dev/null || true
-    
+    sysctl --system 2>/dev/null || true
+
     log_ok "CloudLinux Symlink Protection configured (GID: $NOBODY_GID)"
 }
 
@@ -1906,9 +1897,6 @@ configure_whm_tweaks() {
     sed -i 's/^emailsperdaynotify=.*/emailsperdaynotify=1000/' /var/cpanel/cpanel.config 2>/dev/null || true
     sed -i 's/^exim-retrytime=.*/exim-retrytime=30/' /var/cpanel/cpanel.config 2>/dev/null || true
 
-    # Shell Fork Bomb Protection
-    /usr/local/cpanel/bin/install-login-profile --install limits 2>/dev/null || true
-
     # AutoSSL — Let's Encrypt
     whmapi1 set_autossl_provider provider="LetsEncrypt" terms_of_service_accepted=1 2>/dev/null || true
     whmapi1 set_autossl_metadata_key key=clobber_externally_signed value=1 2>/dev/null || true
@@ -2031,9 +2019,6 @@ KILLEOF
     # ── Shell Fork Bomb Protection ──
     log_info "Enabling Shell Fork Bomb Protection..."
     /usr/local/cpanel/bin/install-login-profile --install limits 2>/dev/null || true
-
-    # ── SMTP Restrictions (disabled — CSF handles this) ──
-    whmapi1 set_tweaksetting key=smtpmailgidonly value=0 2>/dev/null || true
 
     # Fix cPanel RPMs
     /usr/local/cpanel/scripts/check_cpanel_pkgs --fix 2>/dev/null || true
@@ -2166,7 +2151,7 @@ print_summary() {
     CPANEL_VER=$(/usr/local/cpanel/cpanel -V 2>/dev/null | awk '{print $1}' || echo "N/A")
     echo -e "${GREEN}${BOLD}"
     echo "  ╔══════════════════════════════════════════════════╗"
-    echo "  ║ WHM/cPanel PreConfig v3.0 - All-in-One Deployment"
+    echo "  ║ WHM/cPanel PreConfig v5.0 - All-in-One Deployment"
     echo "  ╠══════════════════════════════════════════════════╣"
     printf "  ║  %-12s : %-33s║\n" "Date"        "$(date '+%Y-%m-%d %H:%M UTC')"
     printf "  ║  %-12s : %-33s║\n" "Server Type" "${SERVER_TYPE:0:33}"
@@ -2278,7 +2263,7 @@ main() {
     clear
     echo -e "${CYAN}${BOLD}"
     echo "  ╔════════════════════════════════════════════════════════════════════╗"
-    echo "  ║  WHM/cPanel PreConfig v3.0 - All-in-One Deployment                 ║"
+    echo "  ║  WHM/cPanel PreConfig v5.0 - All-in-One Deployment                 ║"
     echo "  ╠════════════════════════════════════════════════════════════════════╣"
     echo "  ║  FEATURES INCLUDED:                                                ║"
     echo "  ║  • OS Hardening (Sysctl, FSTrim, Swap, Selinux/Firewalld)          ║"
@@ -2288,7 +2273,7 @@ main() {
     echo "  ║  • Performance: LiteSpeed Auto-Installer (TRIAL/PRO)               ║"
     echo "  ║  • Core Plugins: JetBackup 5, Softaculous, WP Toolkit              ║"
     echo "  ║  • Mail & DNS: CMQ, Account DNS Check, Exim Hardening              ║"
-    echo "  ║  • PHP 7.2-8.4 + All Extensions (imagick, redis, ioncube, imap...)   ║"
+    echo "  ║  • PHP 7.2-8.5 + All Extensions (imagick, redis, ioncube, imap...)   ║"
     echo "  ║  • CloudLinux: Key / IP / Skip-Registration + CageFS + Alt Stacks  ║"
     echo "  ║  • Alt Language Stacks: alt-php, alt-nodejs, alt-python, alt-ruby  ║"
     echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"

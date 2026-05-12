@@ -1,4 +1,4 @@
-# Cpanel & WHM-PreConfig v5.0
+# Cpanel & WHM-PreConfig v7.0.0
 
 Automated, robust, and highly secure deployment script to install and configure cPanel/WHM along with essential server plugins like LiteSpeed, CloudLinux, and JetBackup 5. Designed to save significant time and ensure standard security baselines when provisioning new cPanel production servers.
 
@@ -15,6 +15,9 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/head
 ```
 
 *Note: You will be prompted to enter a secret authorization phrase to execute the deployment.*
+
+### 🔄 Interactive Step-by-Step Setup
+During the second run, the script now offers an interactive menu allowing you to run all steps sequentially or start from a specific phase (e.g., cPanel Installation, CSF Config, WHM Tweaks, Plugins, or PHP Setup).
 
 ### 🗑️ Uninstalling Plugins
 If you need to uninstall any of the plugins added by this script, you can run the standalone master uninstaller:
@@ -67,7 +70,13 @@ During the setup, the script intelligently asks if you'd like to install the fol
 - **Account DNS Check**
 - **CleanBackups**
 - **WatchMySQL**
-- **MailBaby Smarthost** *(Automated Exim routing integration)*
+- **IMH Performance Tuner** *(Analyzes server resource usage & recommends Apache/PHP-FPM tuning)*
+- **IMH Backup Disk Usage** *(Monitors and graphs /backup disk space by type/date)*
+- **IMH Snap Stat**
+- **IMH PHP Extension**
+- **IMH Rector Wrapper**
+- **IMH Email Solutions**
+- **MailBaby ** *(Automated Exim routing, multple domain selection, specific domain routing, and plaintext terminal password entry)*
 - **Redis & Memcached** *(Object Caching Daemons + EA4 PHP Extensions for all versions 7.2–8.5)*
 - **cPanel Security Alerts To Telegram** *(CSF & WHM Contact Manager Integration)*
 

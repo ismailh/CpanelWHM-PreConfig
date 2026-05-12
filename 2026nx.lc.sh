@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # WHM/cPanel All Important Plugin Installation Setup Script and Preconfiguration
-# Version: 5.0.0
+# Version: 6.0.0
 # All messages in English
 # SSH Port: 1337
 #
@@ -901,13 +901,28 @@ check_install_mailbaby() {
     echo -ne "  ${CYAN}➔ Enter MailBaby Username:${NC} " >/dev/tty
     read -r MB_USER </dev/tty
     echo -ne "  ${CYAN}➔ Enter MailBaby Password:${NC} " >/dev/tty
-    read -rs MB_PASS </dev/tty
+    read -r MB_PASS </dev/tty
     echo "" >/dev/tty
 
     if [ -z "$MB_USER" ] || [ -z "$MB_PASS" ]; then
         log_error "Skipped (No credentials provided)"
         PL_MB="Failed"
         return 0
+    fi
+
+    echo "  [1] Send all outbound mail through MailBaby (Old style)"
+    echo "  [2] Only use MailBaby when sending from specific domains"
+    read -rp "  Select [1/2] (default 1): " MB_MODE </dev/tty
+
+    MB_SENDERS=""
+    if [ "$MB_MODE" = "2" ]; then
+        echo -ne "  ${CYAN}➔ Enter specific domains separated by space (e.g. domain1.com domain2.com):${NC} " >/dev/tty
+        read -r MB_DOMAINS </dev/tty
+        for d in $MB_DOMAINS; do
+            MB_SENDERS="$MB_SENDERS *@$d : "
+        done
+        # Strip trailing colon and space
+        MB_SENDERS=${MB_SENDERS% : }
     fi
 
     log_info "Configuring MailBaby in Exim..."
@@ -923,7 +938,7 @@ check_install_mailbaby() {
 mailbaby_login:
 driver = plaintext
 public_name = LOGIN
-client_send = : $MB_USER : $MB_PASS
+client_send = ^$MB_USER^$MB_PASS
 
 @BEGINACL@
 
@@ -950,8 +965,18 @@ transport = \${if eq {\$local_part@\$domain} {\$original_local_part@\$original_d
 .else
 transport = mailbaby_smtp
 .endif
-domains = !+local_domains
-ignore_target_hosts = 127.0.0.0/8
+EOF
+
+    if [ "$MB_MODE" = "2" ] && [ -n "$MB_SENDERS" ]; then
+        echo "ignore_target_hosts = 127.0.0.0/8" >> /etc/exim.conf.local
+        echo "senders = $MB_SENDERS" >> /etc/exim.conf.local
+        echo "domains = !+local_domains" >> /etc/exim.conf.local
+    else
+        echo "domains = !+local_domains" >> /etc/exim.conf.local
+        echo "ignore_target_hosts = 127.0.0.0/8" >> /etc/exim.conf.local
+    fi
+
+    cat >> /etc/exim.conf.local << EOF
 route_list = * relay.mailbaby.net::25 randomize byname
 host_find_failed = defer
 no_more
@@ -1022,7 +1047,7 @@ mailbaby_forward_smtp:
 EOF
 
     /scripts/buildeximconf 2>/dev/null || true
-    service exim restart 2>/dev/null || true
+    systemctl restart exim 2>/dev/null || service exim restart 2>/dev/null || true
     log_ok "MailBaby installed and Exim restarted"
     PL_MB="Installed"
 }
@@ -2208,31 +2233,55 @@ first_run() {
 
 second_run() {
     log_section "SECOND RUN — cPanel + Full Configuration"
-    install_cpanel
-    _install_csf
-    _configure_csf
-    configure_whm_tweaks
-    check_install_cmq
-    check_install_cmc
-    check_install_dnscheck
-    check_install_cleanbackups
-    check_install_watchmysql
-    check_install_mailbaby
-    check_install_softaculous
-    check_install_wptoolkit
-    check_install_jetbackup
-    check_install_imunify360
-    check_install_litespeed
-    check_install_cloudlinux
-    check_install_cagefs
-    configure_cloudlinux_symlink
-    install_ea4_php
-    check_install_redis_memcached
-    setup_telegram_alerts
-    # Final CSF reconfiguration (pick up LiteSpeed/Imunify ports)
-    _configure_csf
-    check_licenses
-    print_summary
+    
+    echo "  Select where to start the setup:"
+    echo "  [1] cPanel Install (Start from the beginning)"
+    echo "  [2] CSF Firewall Config"
+    echo "  [3] WHM Tweaks & Basic Config"
+    echo "  [4] cPanel Plugins (MailBaby, CloudLinux, LiteSpeed, etc.)"
+    echo "  [5] PHP & Extensions (EA4)"
+    echo "  [6] Wrap-up (Licenses & Summary)"
+    read -rp "  Select [1-6] (default 1): " SETUP_START </dev/tty
+    
+    [ -z "$SETUP_START" ] && SETUP_START=1
+
+    if [ "$SETUP_START" -le 1 ]; then
+        install_cpanel
+    fi
+    if [ "$SETUP_START" -le 2 ]; then
+        _install_csf
+        _configure_csf
+    fi
+    if [ "$SETUP_START" -le 3 ]; then
+        configure_whm_tweaks
+    fi
+    if [ "$SETUP_START" -le 4 ]; then
+        check_install_cmq
+        check_install_cmc
+        check_install_dnscheck
+        check_install_cleanbackups
+        check_install_watchmysql
+        check_install_mailbaby
+        check_install_softaculous
+        check_install_wptoolkit
+        check_install_jetbackup
+        check_install_imunify360
+        check_install_litespeed
+        check_install_cloudlinux
+        check_install_cagefs
+        configure_cloudlinux_symlink
+    fi
+    if [ "$SETUP_START" -le 5 ]; then
+        install_ea4_php
+        check_install_redis_memcached
+    fi
+    if [ "$SETUP_START" -le 6 ]; then
+        setup_telegram_alerts
+        # Final CSF reconfiguration (pick up LiteSpeed/Imunify ports)
+        _configure_csf
+        check_licenses
+        print_summary
+    fi
 
     if ask_yn "Something wrong? Or cPanel port not working? Flush Firewall ?"; then
         log_info "Flushing iptables and CSF..."

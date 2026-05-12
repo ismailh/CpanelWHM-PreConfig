@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # WHM/cPanel All Important Plugin Installation Setup Script and Preconfiguration
-# Version: 6.0.0
+# Version: 7.0.0
 # All messages in English
 # SSH Port: 1337
 #
@@ -750,6 +750,216 @@ check_install_cmc() {
     else
         log_error "CMC installation failed"
         PL_CMC="Failed"
+    fi
+}
+
+check_install_imh_performance_tuner() {
+    log_section "IMH Performance Tuner"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-performance-tuner/index.php ]; then
+        log_ok "IMH Performance Tuner — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "IMH Performance Tuner already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped IMH Performance Tuner configuration"
+            PL_IMH_PERF="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling IMH Performance Tuner..."
+            bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-performance-tuner/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-performance-tuner/-/raw/main/install.sh) --uninstall >/dev/null 2>&1
+            log_ok "IMH Performance Tuner Uninstalled"
+            PL_IMH_PERF="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install IMH Performance Tuner?"; then 
+        log_warn "Skipped"
+        PL_IMH_PERF="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing IMH Performance Tuner..."
+    bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-performance-tuner/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-performance-tuner/-/raw/main/install.sh) >/dev/null 2>&1
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-performance-tuner/index.php ]; then
+        log_ok "IMH Performance Tuner installed successfully"
+        PL_IMH_PERF="Installed"
+    else
+        log_error "IMH Performance Tuner installation failed"
+        PL_IMH_PERF="Failed"
+    fi
+}
+
+check_install_imh_backup_disk_usage() {
+    log_section "IMH Backup Disk Usage"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-backup-disk-usage/index.php ]; then
+        log_ok "IMH Backup Disk Usage — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "IMH Backup Disk Usage already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped IMH Backup Disk Usage configuration"
+            PL_IMH_BAK="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling IMH Backup Disk Usage..."
+            bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-backup-disk-usage/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-backup-disk-usage/-/raw/main/install.sh) --uninstall >/dev/null 2>&1
+            log_ok "IMH Backup Disk Usage Uninstalled"
+            PL_IMH_BAK="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install IMH Backup Disk Usage?"; then 
+        log_warn "Skipped"
+        PL_IMH_BAK="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing IMH Backup Disk Usage..."
+    bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-backup-disk-usage/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-backup-disk-usage/-/raw/main/install.sh) >/dev/null 2>&1
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-backup-disk-usage/index.php ]; then
+        log_ok "IMH Backup Disk Usage installed successfully"
+        PL_IMH_BAK="Installed"
+    else
+        log_error "IMH Backup Disk Usage installation failed"
+        PL_IMH_BAK="Failed"
+    fi
+}
+
+check_install_imh_snap_stat() {
+    log_section "IMH Snap Stat"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-snap-stat/index.php ]; then
+        log_ok "IMH Snap Stat — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "IMH Snap Stat already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped IMH Snap Stat configuration"
+            PL_IMH_SNAP="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling IMH Snap Stat..."
+            bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-snap-stat/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-snap-stat/-/raw/main/install.sh) --uninstall >/dev/null 2>&1
+            log_ok "IMH Snap Stat Uninstalled"
+            PL_IMH_SNAP="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install IMH Snap Stat?"; then 
+        log_warn "Skipped"
+        PL_IMH_SNAP="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing IMH Snap Stat..."
+    bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-snap-stat/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-snap-stat/-/raw/main/install.sh) >/dev/null 2>&1
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-snap-stat/index.php ]; then
+        log_ok "IMH Snap Stat installed successfully"
+        PL_IMH_SNAP="Installed"
+    else
+        log_error "IMH Snap Stat installation failed"
+        PL_IMH_SNAP="Failed"
+    fi
+}
+
+check_install_imh_php_extension() {
+    log_section "IMH PHP Extension"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-php-extension/index.php ]; then
+        log_ok "IMH PHP Extension — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "IMH PHP Extension already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped IMH PHP Extension configuration"
+            PL_IMH_PHP_EXT="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling IMH PHP Extension..."
+            bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-php-extension/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-php-extension/-/raw/main/install.sh) --uninstall >/dev/null 2>&1
+            log_ok "IMH PHP Extension Uninstalled"
+            PL_IMH_PHP_EXT="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install IMH PHP Extension?"; then 
+        log_warn "Skipped"
+        PL_IMH_PHP_EXT="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing IMH PHP Extension..."
+    bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-php-extension/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-php-extension/-/raw/main/install.sh) >/dev/null 2>&1
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-php-extension/index.php ]; then
+        log_ok "IMH PHP Extension installed successfully"
+        PL_IMH_PHP_EXT="Installed"
+    else
+        log_error "IMH PHP Extension installation failed"
+        PL_IMH_PHP_EXT="Failed"
+    fi
+}
+
+check_install_imh_rector_wrapper() {
+    log_section "IMH Rector Wrapper"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-rector-wrapper/index.php ]; then
+        log_ok "IMH Rector Wrapper — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "IMH Rector Wrapper already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped IMH Rector Wrapper configuration"
+            PL_IMH_REC="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling IMH Rector Wrapper..."
+            bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-rector-wrapper/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-rector-wrapper/-/raw/main/install.sh) --uninstall >/dev/null 2>&1
+            log_ok "IMH Rector Wrapper Uninstalled"
+            PL_IMH_REC="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install IMH Rector Wrapper?"; then 
+        log_warn "Skipped"
+        PL_IMH_REC="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing IMH Rector Wrapper..."
+    bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-rector-wrapper/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-rector-wrapper/-/raw/main/install.sh) >/dev/null 2>&1
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-rector-wrapper/index.php ]; then
+        log_ok "IMH Rector Wrapper installed successfully"
+        PL_IMH_REC="Installed"
+    else
+        log_error "IMH Rector Wrapper installation failed"
+        PL_IMH_REC="Failed"
+    fi
+}
+
+check_install_imh_email_solutions() {
+    log_section "IMH Email Solutions"
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-email-solutions/index.php ]; then
+        log_ok "IMH Email Solutions — Configure / Installed Before"
+        ask_reconfig_uninstall_timeout "IMH Email Solutions already configured. What would you like to do?" 30
+        local choice=$?
+        if [ $choice -eq 1 ]; then
+            log_warn "Skipped IMH Email Solutions configuration"
+            PL_IMH_EMAIL="Installed (Pre-existing)"
+            return 0
+        elif [ $choice -eq 2 ]; then
+            log_info "Uninstalling IMH Email Solutions..."
+            bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-email-solutions/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-email-solutions/-/raw/main/install.sh) --uninstall >/dev/null 2>&1
+            log_ok "IMH Email Solutions Uninstalled"
+            PL_IMH_EMAIL="Uninstalled"
+            return 0
+        fi
+    elif ! ask_yn "Install IMH Email Solutions?"; then 
+        log_warn "Skipped"
+        PL_IMH_EMAIL="Skipped"
+        return 0
+    fi
+
+    log_info "Downloading and installing IMH Email Solutions..."
+    bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-email-solutions/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-email-solutions/-/raw/main/install.sh) >/dev/null 2>&1
+    
+    if [ -f /usr/local/cpanel/whostmgr/docroot/cgi/imh-email-solutions/index.php ]; then
+        log_ok "IMH Email Solutions installed successfully"
+        PL_IMH_EMAIL="Installed"
+    else
+        log_error "IMH Email Solutions installation failed"
+        PL_IMH_EMAIL="Failed"
     fi
 }
 
@@ -2176,7 +2386,7 @@ print_summary() {
     CPANEL_VER=$(/usr/local/cpanel/cpanel -V 2>/dev/null | awk '{print $1}' || echo "N/A")
     echo -e "${GREEN}${BOLD}"
     echo "  ╔══════════════════════════════════════════════════╗"
-    echo "  ║ WHM/cPanel PreConfig v5.0 - All-in-One Deployment"
+    echo "  ║ WHM/cPanel PreConfig v7.0.0 - All-in-One Deployment"
     echo "  ╠══════════════════════════════════════════════════╣"
     printf "  ║  %-12s : %-33s║\n" "Date"        "$(date '+%Y-%m-%d %H:%M UTC')"
     printf "  ║  %-12s : %-33s║\n" "Server Type" "${SERVER_TYPE:0:33}"
@@ -2198,6 +2408,12 @@ print_summary() {
     printf "  ║  %-12s : %-33s║\n" "WP Toolkit" "${PL_WPT}"
     printf "  ║  %-12s : %-33s║\n" "CMQ"        "${PL_CMQ}"
     printf "  ║  %-12s : %-33s║\n" "CMC"        "${PL_CMC}"
+    printf "  ║  %-12s : %-33s║\n" "Perf Tuner" "${PL_IMH_PERF:-Skipped}"
+    printf "  ║  %-12s : %-33s║\n" "Backup Disk" "${PL_IMH_BAK:-Skipped}"
+    printf "  ║  %-12s : %-33s║\n" "Snap Stat"  "${PL_IMH_SNAP:-Skipped}"
+    printf "  ║  %-12s : %-33s║\n" "PHP Ext"    "${PL_IMH_PHP_EXT:-Skipped}"
+    printf "  ║  %-12s : %-33s║\n" "Rector Wrap" "${PL_IMH_REC:-Skipped}"
+    printf "  ║  %-12s : %-33s║\n" "Email Sols" "${PL_IMH_EMAIL:-Skipped}"
     printf "  ║  %-12s : %-33s║\n" "DNS Check"  "${PL_DNS}"
     printf "  ║  %-12s : %-33s║\n" "CleanBackups" "${PL_CLN}"
     printf "  ║  %-12s : %-33s║\n" "WatchMySQL" "${PL_WMY}"
@@ -2261,6 +2477,12 @@ second_run() {
         check_install_dnscheck
         check_install_cleanbackups
         check_install_watchmysql
+        check_install_imh_performance_tuner
+        check_install_imh_backup_disk_usage
+        check_install_imh_snap_stat
+        check_install_imh_php_extension
+        check_install_imh_rector_wrapper
+        check_install_imh_email_solutions
         check_install_mailbaby
         check_install_softaculous
         check_install_wptoolkit

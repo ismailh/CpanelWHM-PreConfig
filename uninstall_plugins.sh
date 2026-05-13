@@ -46,7 +46,7 @@ ask_uninstall "Account DNS Check" "rm -rf /usr/local/cpanel/whostmgr/docroot/cgi
 ask_uninstall "CleanBackups" "rm -rf /usr/local/cpanel/whostmgr/docroot/cgi/cleanbackups /usr/local/cpanel/whostmgr/docroot/cgi/addon_cleanbackups.cgi"
 
 # 6. WatchMySQL
-ask_uninstall "WatchMySQL" "rm -rf /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi"
+ask_uninstall "WatchMySQL" "if [ -f /var/cpanel/addons/watchmysql/bin/uninstall ]; then /var/cpanel/addons/watchmysql/bin/uninstall 2>/dev/null; fi; rm -rf /usr/local/cpanel/whostmgr/docroot/cgi/watchmysql /usr/local/cpanel/whostmgr/docroot/cgi/addon_watchmysql.cgi /var/cpanel/addons/watchmysql /etc/watchmysql*; killall -9 watchmysql 2>/dev/null || true"
 
 # 7. Softaculous
 ask_uninstall "Softaculous" "wget -q -N http://files.softaculous.com/install.sh -O /tmp/soft.sh && chmod 755 /tmp/soft.sh && /tmp/soft.sh --uninstall 2>/dev/null; rm -f /tmp/soft.sh"
@@ -69,7 +69,28 @@ ask_uninstall "CloudLinux" "wget -q https://repo.cloudlinux.com/cloudlinux/sourc
 # 13. Redis & Memcached
 ask_uninstall "Redis & Memcached" "systemctl stop redis-server memcached redis 2>/dev/null; yum remove -y redis memcached 2>/dev/null || apt-get remove -y redis-server memcached 2>/dev/null"
 
-# 14. Telegram Alerts (CSF & WHM Bridge)
+# 14. IMH Performance Tuner
+ask_uninstall "IMH Performance Tuner" "bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-performance-tuner/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-performance-tuner/-/raw/main/install.sh) --uninstall >/dev/null 2>&1"
+
+# 15. IMH Backup Disk Usage
+ask_uninstall "IMH Backup Disk Usage" "bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-backup-disk-usage/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-backup-disk-usage/-/raw/main/install.sh) --uninstall >/dev/null 2>&1"
+
+# 16. IMH Snap Stat
+ask_uninstall "IMH Snap Stat" "bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-snap-stat/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-snap-stat/-/raw/main/install.sh) --uninstall >/dev/null 2>&1"
+
+# 17. IMH PHP Extension
+ask_uninstall "IMH PHP Extension" "bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-php-extension/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-php-extension/-/raw/main/install.sh) --uninstall >/dev/null 2>&1"
+
+# 18. IMH Rector Wrapper
+ask_uninstall "IMH Rector Wrapper" "bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-rector-wrapper/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-rector-wrapper/-/raw/main/install.sh) --uninstall >/dev/null 2>&1"
+
+# 19. IMH Email Solutions
+ask_uninstall "IMH Email Solutions" "bash <(curl -fsSL https://gitlab.panelplugins.com/plugins/imh-email-solutions/-/raw/main/install.sh || wget -qO- https://gitlab.panelplugins.com/plugins/imh-email-solutions/-/raw/main/install.sh) --uninstall >/dev/null 2>&1"
+
+# 20. MailBaby  (Revert Exim)
+ask_uninstall "MailBaby " "cp /etc/exim.conf.local /etc/exim.conf.local.bak_mailbaby 2>/dev/null; echo '@CONFIG@' > /etc/exim.conf.local; echo 'message_size_limit = 50M' >> /etc/exim.conf.local; /scripts/buildeximconf 2>/dev/null; service exim restart 2>/dev/null"
+
+# 21. Telegram Alerts (CSF & WHM Bridge)
 ask_uninstall "Telegram Alerts Bridge" "rm -f /usr/local/bin/telegram-alert /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php /root/.telegram_installed; sed -i '/telegram-alert/d' /etc/csf/csfpost.sh 2>/dev/null"
 
 echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════════╗${NC}"

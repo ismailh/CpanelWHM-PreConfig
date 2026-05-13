@@ -1927,12 +1927,14 @@ install_ea4_php() {
         PHP_VERS="$1"
     else
         echo ""
-        echo "  Select PHP versions to install (space separated, e.g. 80 81 82 83 84 85):"
-        echo "  Default versions: 72 73 74 80 81 82 83 84 85"
-        read -rp "  Enter versions (press ENTER for all): " USER_PHP_CHOICE </dev/tty
+        echo "  - Type '8.x' for PHP 8.0 to 8.5"
+        echo "  - Press ENTER for all (7.2 to 8.5)"
+        read -rp "  Enter versions/keyword: " USER_PHP_CHOICE </dev/tty
         
-        if [ -z "$USER_PHP_CHOICE" ]; then
+        if [ -z "$USER_PHP_CHOICE" ] || [ "${USER_PHP_CHOICE,,}" = "all" ]; then
             PHP_VERS="72 73 74 80 81 82 83 84 85"
+        elif [ "${USER_PHP_CHOICE,,}" = "8.x" ]; then
+            PHP_VERS="80 81 82 83 84 85"
         else
             PHP_VERS="$USER_PHP_CHOICE"
         fi
@@ -2070,7 +2072,7 @@ EOF
     whmapi1 php_set_system_default_version version=ea-php85 2>/dev/null || true
     whmapi1 php_set_default_accounts_to_fpm default_accounts_to_fpm=1 2>/dev/null || true
 
-    log_ok "EA4 PHP 7.2–8.5 installed with all extensions (mysqlnd, mysqli, imagick, ioncube, imap, redis, ctype, tokenizer, bz2, pspell, process, json, posix, igbinary, sqlite3, tidy, uuid, maxminddb, mbregex, and more)"
+    log_ok "EA4 PHP versions ($PHP_VERS) installed with all extensions (mbstring, mbregex, xml, igbinary, sqlite3, tidy, uuid, maxminddb, imagick, ioncube, and more)"
 }
 
 # ═══════════════════════════════════════════

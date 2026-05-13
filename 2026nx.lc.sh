@@ -3,7 +3,7 @@
 # WHM/cPanel All Important Plugin Installation Setup Script and Preconfiguration
 # Version: 7.0.0
 # All messages in English
-# SSH Port: 1337
+# SSH Port: 22 or change custom port
 #
 # Supported OS:
 #   Ubuntu 20.04/22.04/24.04 LTS
@@ -23,7 +23,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 CWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 LOGFILE="/var/log/whm_preconfig_$(date +%Y%m%d_%H%M%S).log"
 RUN_FLAG="/root/.whm_preconfig_run1_done"
-SSH_PORT="1337"
+SSH_PORT="22"
 PASSV_PORT="49152:65534"
 PASSV_MIN="49152"
 PASSV_MAX="65534"
@@ -188,7 +188,7 @@ EOF
     sysctl --system 2>/dev/null || true
 }
 
-# ── SSH HARDENING (port 1337) ──
+# ── SSH HARDENING (port 22 or custom port) ──
 _apply_ssh() {
     log_info "Hardening SSH (port $SSH_PORT)..."
     cp /etc/ssh/sshd_config "/etc/ssh/sshd_config.bak.$(date +%s)" 2>/dev/null || true
@@ -581,7 +581,7 @@ _configure_csf() {
         sed -i "s/^${alert} = .*/${alert} = \"0\"/g" "$CSF"
     done
 
-    # Add SSH port 1337 + cPanel alt port 1157 to TCP_IN/TCP_OUT
+    # Add SSH port 22 or custom port + cPanel alt port 1157 to TCP_IN/TCP_OUT
     for D in TCP_IN TCP_OUT TCP6_IN TCP6_OUT; do
         CURR=$(grep "^${D}" "$CSF" | cut -d'=' -f2 | sed 's/ //g;s/"//g')
         echo "$CURR" | grep -q "$SSH_PORT" || \

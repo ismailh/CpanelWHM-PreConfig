@@ -1922,7 +1922,18 @@ install_ea4_php() {
     fi
 
     # PHP versions to install (7.2–8.5)
-    local PHP_VERS="72 73 74 80 81 82 83 84 85"
+    echo ""
+    echo "  Select PHP versions to install (space separated, e.g. 80 81 82 83 84 85):"
+    echo "  Default versions: 72 73 74 80 81 82 83 84 85"
+    read -rp "  Enter versions (press ENTER for all): " USER_PHP_CHOICE </dev/tty
+    
+    local PHP_VERS
+    if [ -z "$USER_PHP_CHOICE" ]; then
+        PHP_VERS="72 73 74 80 81 82 83 84 85"
+    else
+        PHP_VERS="$USER_PHP_CHOICE"
+    fi
+    log_info "Selected PHP versions: $PHP_VERS"
 
     # Extensions per version — full set
     local EXTS="pear php-cli php-common php-curl php-devel php-exif php-fileinfo \

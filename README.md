@@ -94,7 +94,14 @@ If installed via the script fallback, the LiteSpeed WebAdmin is deployed with th
 
 ### PHP Versions Installed (EA4 — 7.2 to 8.5)
 
-All versions are installed via EasyApache 4 with full extensions:
+The script features a highly flexible, interactive PHP installer. You can choose to install the full suite or exclusively target modern environments.
+
+**Installation Options:**
+- **Custom Selection:** Type specific versions separated by space (e.g., `80 81 84`).
+- **Keyword `all`:** Installs the full suite from `7.2` through `8.5` (default).
+- **Keyword `8.x` (Quick Preset):** Installs only modern, high-performance versions (`8.0` to `8.5`).
+
+All selected versions are provisioned via EasyApache 4 with the following comprehensive extension suite:
 
 | Version | Status |
 |---------|--------|

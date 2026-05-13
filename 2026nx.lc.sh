@@ -1858,10 +1858,13 @@ EOF
 # EA4 PHP 7.2–8.5 + ALL EXTENSIONS
 # ═══════════════════════════════════════════
 install_ea4_php() {
-    log_section "EA4 PHP 7.2–8.5 + Extensions"
+    local SELECTED_VERS="$1"
+    local DISPLAY_VERS="${SELECTED_VERS:-7.2–8.5}"
+    [ "$SELECTED_VERS" = "80 81 82 83 84 85" ] && DISPLAY_VERS="8.0–8.5"
+    log_section "EA4 PHP $DISPLAY_VERS + Extensions"
 
     if [ -f /var/cpanel/ApachePHPFPM/system_pool_defaults.yaml ] || [ -d /opt/cpanel/ea-php81 ]; then
-        log_ok "EA4 PHP 7.2–8.5 + Extensions — Configure / Installed Before"
+        log_ok "EA4 PHP $DISPLAY_VERS + Extensions — Configure / Installed Before"
         if ! ask_yn_timeout "EA4 PHP already configured. Do you want to reconfigure it?" 30; then
             log_warn "Skipped EA4 PHP configuration"
             return 0

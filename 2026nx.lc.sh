@@ -1858,9 +1858,30 @@ EOF
 # EA4 PHP 7.2–8.5 + ALL EXTENSIONS
 # ═══════════════════════════════════════════
 install_ea4_php() {
-    local SELECTED_VERS="$1"
-    local DISPLAY_VERS="${SELECTED_VERS:-7.2–8.5}"
-    [ "$SELECTED_VERS" = "80 81 82 83 84 85" ] && DISPLAY_VERS="8.0–8.5"
+    # ── 1. Determine PHP Versions ──
+    local PHP_VERS
+    if [ -n "$1" ]; then
+        PHP_VERS="$1"
+    else
+        echo ""
+        echo "  - Type '8.x' for PHP 8.0 to 8.5"
+        echo "  - Press ENTER for all (7.2 to 8.5)"
+        read -rp "  Enter versions/keyword: " USER_PHP_CHOICE </dev/tty
+        
+        if [ -z "$USER_PHP_CHOICE" ] || [ "${USER_PHP_CHOICE,,}" = "all" ]; then
+            PHP_VERS="72 73 74 80 81 82 83 84 85"
+        elif [ "${USER_PHP_CHOICE,,}" = "8.x" ]; then
+            PHP_VERS="80 81 82 83 84 85"
+        else
+            PHP_VERS="$USER_PHP_CHOICE"
+        fi
+    fi
+
+    # ── 2. Set Display Name ──
+    local DISPLAY_VERS="Custom (${PHP_VERS})"
+    [ "$PHP_VERS" = "72 73 74 80 81 82 83 84 85" ] && DISPLAY_VERS="7.2–8.5"
+    [ "$PHP_VERS" = "80 81 82 83 84 85" ] && DISPLAY_VERS="8.0–8.5"
+
     log_section "EA4 PHP $DISPLAY_VERS + Extensions"
 
     if [ -f /var/cpanel/ApachePHPFPM/system_pool_defaults.yaml ] || [ -d /opt/cpanel/ea-php81 ]; then
@@ -1924,24 +1945,6 @@ install_ea4_php() {
         $PKG install -y libsodium libsodium-devel 2>/dev/null || true
     fi
 
-    # PHP versions to install (7.2–8.5)
-    local PHP_VERS
-    if [ -n "$1" ]; then
-        PHP_VERS="$1"
-    else
-        echo ""
-        echo "  - Type '8.x' for PHP 8.0 to 8.5"
-        echo "  - Press ENTER for all (7.2 to 8.5)"
-        read -rp "  Enter versions/keyword: " USER_PHP_CHOICE </dev/tty
-        
-        if [ -z "$USER_PHP_CHOICE" ] || [ "${USER_PHP_CHOICE,,}" = "all" ]; then
-            PHP_VERS="72 73 74 80 81 82 83 84 85"
-        elif [ "${USER_PHP_CHOICE,,}" = "8.x" ]; then
-            PHP_VERS="80 81 82 83 84 85"
-        else
-            PHP_VERS="$USER_PHP_CHOICE"
-        fi
-    fi
     log_info "Selected PHP versions: $PHP_VERS"
 
     # Extensions per version — full set

@@ -1,4 +1,4 @@
-# Cpanel & WHM-PreConfig v7.0.0
+# WHM/cPanel PreConfig v7.0.0 - All-in-One Deployment
 
 Automated, robust, and highly secure deployment script to install and configure cPanel/WHM along with essential server plugins like LiteSpeed, CloudLinux, and JetBackup 5. Designed to save significant time and ensure standard security baselines when provisioning new cPanel production servers.
 
@@ -29,7 +29,7 @@ curl -Ls https://raw.githubusercontent.com/ismailh/CpanelWHM-PreConfig/refs/head
 ---
 
 ## 🔒 Base Hardening
-- **Custom SSH Port:** `1337` (Root login allowed with Password Auth enabled)
+- **Custom SSH Port:** Interactive prompt (defaults to `22`, allows custom port, or keeps existing changed port; additionally enables port `1337` as a fallback to prevent lockouts; both instantly whitelisted in firewalls/CSF; Root login allowed with Password Auth enabled)
 - **Firewall:** IPTables / Firewalld replaced natively with **CSF (ConfigServer Security & Firewall)**.
 - **Kernel Tuning:** Sysctl optimizations for network performance, swap reduced to 10.
 - **Service Optimization:** Stops and disables unused background services (telnet, rsh, rlogin, rexec, finger, talk, ntalk, rpcbind).

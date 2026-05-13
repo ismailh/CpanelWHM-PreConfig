@@ -1945,7 +1945,7 @@ php-igbinary php-sqlite3 php-tidy php-uuid php-maxminddb php-mbregex"
     INSTALL_LIST="$INSTALL_LIST ea-php72-php-ioncube10 ea-php73-php-ioncube10"
     INSTALL_LIST="$INSTALL_LIST ea-php74-php-ioncube10 ea-php81-php-ioncube12"
     INSTALL_LIST="$INSTALL_LIST ea-php82-php-ioncube13 ea-php83-php-ioncube14"
-    INSTALL_LIST="$INSTALL_LIST ea-php84-php-ioncube14 ea-php85-php-ioncube14"
+    INSTALL_LIST="$INSTALL_LIST ea-php84-php-ioncube14 ea-php85-php-ioncube15"
 
     # Apache modules
     INSTALL_LIST="$INSTALL_LIST ea-apache24-mod_proxy_fcgi ea-apache24-mod_version ea-apache24-mod_env"

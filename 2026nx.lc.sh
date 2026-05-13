@@ -1658,7 +1658,7 @@ EOF
     chmod 755 /usr/local/cpanel/whostmgr/docroot/cgi/telegram_bridge.php
     
     # Send completion alert
-    /usr/local/bin/telegram-alert "✅ WHM/cPanel Deployment v5.0 Successfully Completed on IP: $PUBLIC_IP"
+    /usr/local/bin/telegram-alert "✅ WHM/cPanel Deployment v7.0.0 Successfully Completed on IP: $PUBLIC_IP"
     
     log_ok "Telegram Security Alerts Configured!"
     touch /root/.telegram_installed
@@ -1922,16 +1922,20 @@ install_ea4_php() {
     fi
 
     # PHP versions to install (7.2–8.5)
-    echo ""
-    echo "  Select PHP versions to install (space separated, e.g. 80 81 82 83 84 85):"
-    echo "  Default versions: 72 73 74 80 81 82 83 84 85"
-    read -rp "  Enter versions (press ENTER for all): " USER_PHP_CHOICE </dev/tty
-    
     local PHP_VERS
-    if [ -z "$USER_PHP_CHOICE" ]; then
-        PHP_VERS="72 73 74 80 81 82 83 84 85"
+    if [ -n "$1" ]; then
+        PHP_VERS="$1"
     else
-        PHP_VERS="$USER_PHP_CHOICE"
+        echo ""
+        echo "  Select PHP versions to install (space separated, e.g. 80 81 82 83 84 85):"
+        echo "  Default versions: 72 73 74 80 81 82 83 84 85"
+        read -rp "  Enter versions (press ENTER for all): " USER_PHP_CHOICE </dev/tty
+        
+        if [ -z "$USER_PHP_CHOICE" ]; then
+            PHP_VERS="72 73 74 80 81 82 83 84 85"
+        else
+            PHP_VERS="$USER_PHP_CHOICE"
+        fi
     fi
     log_info "Selected PHP versions: $PHP_VERS"
 
@@ -2467,11 +2471,18 @@ second_run() {
     echo "  [2] CSF Firewall Config"
     echo "  [3] WHM Tweaks & Basic Config"
     echo "  [4] cPanel Plugins (MailBaby, CloudLinux, LiteSpeed, etc.)"
-    echo "  [5] PHP & Extensions (EA4)"
-    echo "  [6] Wrap-up (Licenses & Summary)"
-    read -rp "  Select [1-6] (default 1): " SETUP_START </dev/tty
+    echo "  [5] PHP & Extensions (EA4) - Custom/All"
+    echo "  [6] PHP 8.0 to 8.5 Only (Recommended)"
+    echo "  [7] Wrap-up (Licenses & Summary)"
+    read -rp "  Select [1-7] (default 1): " SETUP_START </dev/tty
     
     [ -z "$SETUP_START" ] && SETUP_START=1
+
+    if [ "$SETUP_START" -eq 6 ]; then
+        install_ea4_php "80 81 82 83 84 85"
+        check_install_redis_memcached
+        SETUP_START=7 # Skip to wrap-up
+    fi
 
     if [ "$SETUP_START" -le 1 ]; then
         install_cpanel
@@ -2509,7 +2520,7 @@ second_run() {
         install_ea4_php
         check_install_redis_memcached
     fi
-    if [ "$SETUP_START" -le 6 ]; then
+    if [ "$SETUP_START" -le 7 ]; then
         setup_telegram_alerts
         # Final CSF reconfiguration (pick up LiteSpeed/Imunify ports)
         _configure_csf
@@ -2546,7 +2557,7 @@ main() {
     clear
     echo -e "${CYAN}${BOLD}"
     echo "  ╔════════════════════════════════════════════════════════════════════╗"
-    echo "  ║  WHM/cPanel PreConfig v5.0 - All-in-One Deployment                 ║"
+    echo "  ║  WHM/cPanel PreConfig v7.0.0 - All-in-One Deployment               ║"
     echo "  ╠════════════════════════════════════════════════════════════════════╣"
     echo "  ║  FEATURES INCLUDED:                                                ║"
     echo "  ║  • OS Hardening (Sysctl, FSTrim, Swap, Selinux/Firewalld)          ║"
@@ -2556,7 +2567,7 @@ main() {
     echo "  ║  • Performance: LiteSpeed Auto-Installer (TRIAL/PRO)               ║"
     echo "  ║  • Core Plugins: JetBackup 5, Softaculous, WP Toolkit              ║"
     echo "  ║  • Mail & DNS: CMQ, Account DNS Check, Exim Hardening              ║"
-    echo "  ║  • PHP 7.2-8.5 + All Extensions (imagick, redis, ioncube, imap...)   ║"
+    echo "  ║  • PHP 7.2-8.5 (Custom Selection) + ionCube 15 + All Extensions    ║"
     echo "  ║  • CloudLinux: Key / IP / Skip-Registration + CageFS + Alt Stacks  ║"
     echo "  ║  • Alt Language Stacks: alt-php, alt-nodejs, alt-python, alt-ruby  ║"
     echo "  ║  • Fully Automated WHM Tweak Settings Configuration                ║"

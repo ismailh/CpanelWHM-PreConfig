@@ -115,11 +115,11 @@ All versions are installed via EasyApache 4 with full extensions:
 | Category | Extensions |
 |----------|------------|
 | Core | `php-cli`, `php-common`, `php-devel`, `pear`, `runtime` |
-| Database | `php-mysqlnd`, `php-mysqli`, `php-pdo` |
-| Caching | `php-opcache`, `php-redis`, `php-apcu`, `php-memcached` |
+| Database | `php-mysqlnd`, `php-mysqli`, `php-pdo`, `php-sqlite3` |
+| Caching | `php-opcache`, `php-redis`, `php-apcu`, `php-memcached`, `php-igbinary` |
 | Image | `php-gd`, `php-imagick` |
 | Network | `php-curl`, `php-imap`, `php-sockets`, `php-ldap` |
-| String | `php-mbstring`, `php-iconv`, `php-gettext`, `php-intl` |
+| String | `php-mbstring`, `php-mbregex`, `php-iconv`, `php-gettext`, `php-intl` |
 | File | `php-fileinfo`, `php-exif`, `php-ftp`, `php-zip`, `php-bz2` |
 | Math | `php-bcmath`, `php-gmp`, `php-sodium` |
 | XML | `php-xml`, `php-xmlrpc`, `php-soap` |
@@ -129,6 +129,7 @@ All versions are installed via EasyApache 4 with full extensions:
 | Type | `php-ctype`, `php-tokenizer`, `php-json` |
 | Spell | `php-pspell` |
 | Web | `php-fpm`, `php-litespeed` |
+| Utilities | `php-tidy`, `php-uuid`, `php-maxminddb` |
 
 **IonCube Loader versions per PHP:**
 
@@ -137,7 +138,8 @@ All versions are installed via EasyApache 4 with full extensions:
 | 7.2, 7.3, 7.4 | `ioncube10` |
 | 8.1 | `ioncube12` |
 | 8.2 | `ioncube13` |
-| 8.3, 8.4, 8.5 | `ioncube14` |
+| 8.3, 8.4 | `ioncube14` |
+| 8.5 | `ioncube15` |
 
 ### Hardened PHP.ini Settings (all versions)
 - **memory_limit:** `1024M`

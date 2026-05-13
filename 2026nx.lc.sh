@@ -2066,10 +2066,15 @@ EOF
     /scripts/restartsrv_apache_php_fpm 2>/dev/null || true
 
     # Set handlers and default PHP version
-    for V in 72 73 74 80 81 82 83 84 85; do
+    for V in $PHP_VERS; do
         whmapi1 php_set_handler version=ea-php${V} handler=cgi 2>/dev/null || true
     done
-    whmapi1 php_set_system_default_version version=ea-php85 2>/dev/null || true
+    
+    # Set default version to 8.5 if installed, otherwise pick highest in list
+    local DEFAULT_PHP="ea-php85"
+    echo "$PHP_VERS" | grep -q "85" || DEFAULT_PHP="ea-php$(echo $PHP_VERS | awk '{print $NF}')"
+    
+    whmapi1 php_set_system_default_version version=${DEFAULT_PHP} 2>/dev/null || true
     whmapi1 php_set_default_accounts_to_fpm default_accounts_to_fpm=1 2>/dev/null || true
 
     log_ok "EA4 PHP versions ($PHP_VERS) installed with all extensions (mbstring, mbregex, xml, igbinary, sqlite3, tidy, uuid, maxminddb, imagick, ioncube, and more)"

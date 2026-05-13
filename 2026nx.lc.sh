@@ -257,7 +257,7 @@ run_rhel() {
         bash-completion lsof htop nmap-ncat sysstat \
         crontabs cronie cronie-anacron openldap-compat \
         oniguruma libsodium jq ipcalc glibc-all-langpacks \
-        smartmontools mdadm pciutils usbutils lshw nvme-cli hdparm 2>/dev/null || true
+        smartmontools mdadm pciutils usbutils lshw nvme-cli hdparm sqlite 2>/dev/null || true
 
     # SELinux disable
     setenforce 0 2>/dev/null || true
@@ -311,7 +311,7 @@ run_debian_ubuntu() {
         bash-completion lsof htop netcat-openbsd sysstat \
         unattended-upgrades apt-listchanges sendmail \
         software-properties-common ntpdate jq \
-        smartmontools mdadm pciutils usbutils lshw nvme-cli hdparm 2>/dev/null || true
+        smartmontools mdadm pciutils usbutils lshw nvme-cli hdparm sqlite3 2>/dev/null || true
 
     # Disable ufw but do NOT disable networking
     ufw disable 2>/dev/null || true
@@ -1930,7 +1930,8 @@ php-ftp php-gd php-iconv php-intl php-litespeed php-mbstring php-mysqlnd \
 php-mysqli php-opcache php-pdo php-posix php-soap php-zip runtime php-bcmath \
 php-gettext php-gmp php-xml php-imap php-sodium php-calendar \
 php-fpm php-ldap php-xmlrpc php-sockets php-imagick \
-php-ctype php-tokenizer php-bz2 php-pspell php-process php-json"
+php-ctype php-tokenizer php-bz2 php-pspell php-process php-json \
+php-igbinary php-sqlite3 php-tidy php-uuid php-maxminddb php-mbregex"
 
     local INSTALL_LIST=""
     for V in $PHP_VERS; do
@@ -2054,7 +2055,7 @@ EOF
     whmapi1 php_set_system_default_version version=ea-php85 2>/dev/null || true
     whmapi1 php_set_default_accounts_to_fpm default_accounts_to_fpm=1 2>/dev/null || true
 
-    log_ok "EA4 PHP 7.2–8.5 installed with all extensions (mysqlnd, mysqli, imagick, ioncube, imap, redis, ctype, tokenizer, bz2, pspell, process, json, posix, and more)"
+    log_ok "EA4 PHP 7.2–8.5 installed with all extensions (mysqlnd, mysqli, imagick, ioncube, imap, redis, ctype, tokenizer, bz2, pspell, process, json, posix, igbinary, sqlite3, tidy, uuid, maxminddb, mbregex, and more)"
 }
 
 # ═══════════════════════════════════════════
